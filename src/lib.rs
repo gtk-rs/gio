@@ -12,16 +12,21 @@ extern crate glib_sys as glib_ffi;
 extern crate gobject_sys as gobject_ffi;
 extern crate libc;
 
+macro_rules! callback_guard {
+    () => (
+        let _guard = ::glib::CallbackGuard::new();
+    )
+}
+
+mod application;
+
 pub use glib::{
     Error,
     Object,
 };
 
 pub use auto::*;
-pub use resources::{
-    resources_register,
-    resources_unregister,
-};
+pub use auto::functions::*;
 
 pub mod signal {
     pub use glib::signal::Inhibit;
@@ -29,13 +34,10 @@ pub mod signal {
 
 pub mod prelude {
     pub use auto::traits::*;
+    pub use application::*;
 }
 
-macro_rules! callback_guard {
-    () => (
-        let _guard = ::glib::CallbackGuard::new();
-    )
-}
+pub use prelude::*;
 
+#[cfg_attr(feature = "cargo-clippy", allow(transmute_ptr_to_ref))]
 mod auto;
-mod resources;
