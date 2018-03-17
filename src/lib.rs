@@ -5,6 +5,8 @@
 #[macro_use]
 extern crate bitflags;
 #[macro_use]
+extern crate lazy_static;
+#[macro_use]
 extern crate glib;
 
 extern crate gio_sys as ffi;
@@ -19,7 +21,16 @@ macro_rules! callback_guard {
 }
 
 mod application;
+mod input_stream;
+mod memory_input_stream;
+mod memory_output_stream;
+mod output_stream;
 mod resource;
+mod socket;
+mod socket_listener;
+
+#[cfg(test)]
+mod test_util;
 
 pub use glib::{
     Error,
@@ -36,6 +47,10 @@ pub mod signal {
 pub mod prelude {
     pub use auto::traits::*;
     pub use application::*;
+    pub use input_stream::InputStreamExtManual;
+    pub use output_stream::OutputStreamExtManual;
+    pub use socket::*;
+    pub use socket_listener::SocketListenerExtManual;
 }
 
 pub use prelude::*;
