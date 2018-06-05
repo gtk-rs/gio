@@ -51,6 +51,7 @@ generate = [
     "Gio.Seekable",
     "Gio.SettingsBindFlags",
     "Gio.SettingsSchema",
+    "Gio.SettingsSchemaSource",
     "Gio.SimpleActionGroup",
     "Gio.SimplePermission",
     "Gio.SocketAddress",
