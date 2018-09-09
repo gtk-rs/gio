@@ -3,6 +3,7 @@
 // DO NOT EDIT
 
 use ffi;
+use glib::Quark;
 use glib::StaticType;
 use glib::Type;
 use glib::error::ErrorDomain;
@@ -11,10 +12,142 @@ use glib::value::FromValue;
 use glib::value::FromValueOptional;
 use glib::value::SetValue;
 use glib::value::Value;
-use glib_ffi;
 use gobject_ffi;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
+pub enum ConverterResult {
+    Error,
+    Converted,
+    Finished,
+    Flushed,
+    #[doc(hidden)]
+    __Unknown(i32),
+}
+
+#[doc(hidden)]
+impl ToGlib for ConverterResult {
+    type GlibType = ffi::GConverterResult;
+
+    fn to_glib(&self) -> ffi::GConverterResult {
+        match *self {
+            ConverterResult::Error => ffi::G_CONVERTER_ERROR,
+            ConverterResult::Converted => ffi::G_CONVERTER_CONVERTED,
+            ConverterResult::Finished => ffi::G_CONVERTER_FINISHED,
+            ConverterResult::Flushed => ffi::G_CONVERTER_FLUSHED,
+            ConverterResult::__Unknown(value) => value
+        }
+    }
+}
+
+#[doc(hidden)]
+impl FromGlib<ffi::GConverterResult> for ConverterResult {
+    fn from_glib(value: ffi::GConverterResult) -> Self {
+        match value {
+            0 => ConverterResult::Error,
+            1 => ConverterResult::Converted,
+            2 => ConverterResult::Finished,
+            3 => ConverterResult::Flushed,
+            value => ConverterResult::__Unknown(value),
+        }
+    }
+}
+
+impl StaticType for ConverterResult {
+    fn static_type() -> Type {
+        unsafe { from_glib(ffi::g_converter_result_get_type()) }
+    }
+}
+
+impl<'a> FromValueOptional<'a> for ConverterResult {
+    unsafe fn from_value_optional(value: &Value) -> Option<Self> {
+        Some(FromValue::from_value(value))
+    }
+}
+
+impl<'a> FromValue<'a> for ConverterResult {
+    unsafe fn from_value(value: &Value) -> Self {
+        from_glib(gobject_ffi::g_value_get_enum(value.to_glib_none().0))
+    }
+}
+
+impl SetValue for ConverterResult {
+    unsafe fn set_value(value: &mut Value, this: &Self) {
+        gobject_ffi::g_value_set_enum(value.to_glib_none_mut().0, this.to_glib())
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
+pub enum CredentialsType {
+    Invalid,
+    LinuxUcred,
+    FreebsdCmsgcred,
+    OpenbsdSockpeercred,
+    SolarisUcred,
+    NetbsdUnpcbid,
+    #[doc(hidden)]
+    __Unknown(i32),
+}
+
+#[doc(hidden)]
+impl ToGlib for CredentialsType {
+    type GlibType = ffi::GCredentialsType;
+
+    fn to_glib(&self) -> ffi::GCredentialsType {
+        match *self {
+            CredentialsType::Invalid => ffi::G_CREDENTIALS_TYPE_INVALID,
+            CredentialsType::LinuxUcred => ffi::G_CREDENTIALS_TYPE_LINUX_UCRED,
+            CredentialsType::FreebsdCmsgcred => ffi::G_CREDENTIALS_TYPE_FREEBSD_CMSGCRED,
+            CredentialsType::OpenbsdSockpeercred => ffi::G_CREDENTIALS_TYPE_OPENBSD_SOCKPEERCRED,
+            CredentialsType::SolarisUcred => ffi::G_CREDENTIALS_TYPE_SOLARIS_UCRED,
+            CredentialsType::NetbsdUnpcbid => ffi::G_CREDENTIALS_TYPE_NETBSD_UNPCBID,
+            CredentialsType::__Unknown(value) => value
+        }
+    }
+}
+
+#[doc(hidden)]
+impl FromGlib<ffi::GCredentialsType> for CredentialsType {
+    fn from_glib(value: ffi::GCredentialsType) -> Self {
+        match value {
+            0 => CredentialsType::Invalid,
+            1 => CredentialsType::LinuxUcred,
+            2 => CredentialsType::FreebsdCmsgcred,
+            3 => CredentialsType::OpenbsdSockpeercred,
+            4 => CredentialsType::SolarisUcred,
+            5 => CredentialsType::NetbsdUnpcbid,
+            value => CredentialsType::__Unknown(value),
+        }
+    }
+}
+
+impl StaticType for CredentialsType {
+    fn static_type() -> Type {
+        unsafe { from_glib(ffi::g_credentials_type_get_type()) }
+    }
+}
+
+impl<'a> FromValueOptional<'a> for CredentialsType {
+    unsafe fn from_value_optional(value: &Value) -> Option<Self> {
+        Some(FromValue::from_value(value))
+    }
+}
+
+impl<'a> FromValue<'a> for CredentialsType {
+    unsafe fn from_value(value: &Value) -> Self {
+        from_glib(gobject_ffi::g_value_get_enum(value.to_glib_none().0))
+    }
+}
+
+impl SetValue for CredentialsType {
+    unsafe fn set_value(value: &mut Value, this: &Self) {
+        gobject_ffi::g_value_set_enum(value.to_glib_none_mut().0, this.to_glib())
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
 pub enum DataStreamByteOrder {
     BigEndian,
     LittleEndian,
@@ -73,7 +206,8 @@ impl SetValue for DataStreamByteOrder {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
 pub enum DataStreamNewlineType {
     Lf,
     Cr,
@@ -135,7 +269,221 @@ impl SetValue for DataStreamNewlineType {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
+pub enum DriveStartStopType {
+    Unknown,
+    Shutdown,
+    Network,
+    Multidisk,
+    Password,
+    #[doc(hidden)]
+    __Unknown(i32),
+}
+
+#[doc(hidden)]
+impl ToGlib for DriveStartStopType {
+    type GlibType = ffi::GDriveStartStopType;
+
+    fn to_glib(&self) -> ffi::GDriveStartStopType {
+        match *self {
+            DriveStartStopType::Unknown => ffi::G_DRIVE_START_STOP_TYPE_UNKNOWN,
+            DriveStartStopType::Shutdown => ffi::G_DRIVE_START_STOP_TYPE_SHUTDOWN,
+            DriveStartStopType::Network => ffi::G_DRIVE_START_STOP_TYPE_NETWORK,
+            DriveStartStopType::Multidisk => ffi::G_DRIVE_START_STOP_TYPE_MULTIDISK,
+            DriveStartStopType::Password => ffi::G_DRIVE_START_STOP_TYPE_PASSWORD,
+            DriveStartStopType::__Unknown(value) => value
+        }
+    }
+}
+
+#[doc(hidden)]
+impl FromGlib<ffi::GDriveStartStopType> for DriveStartStopType {
+    fn from_glib(value: ffi::GDriveStartStopType) -> Self {
+        match value {
+            0 => DriveStartStopType::Unknown,
+            1 => DriveStartStopType::Shutdown,
+            2 => DriveStartStopType::Network,
+            3 => DriveStartStopType::Multidisk,
+            4 => DriveStartStopType::Password,
+            value => DriveStartStopType::__Unknown(value),
+        }
+    }
+}
+
+impl StaticType for DriveStartStopType {
+    fn static_type() -> Type {
+        unsafe { from_glib(ffi::g_drive_start_stop_type_get_type()) }
+    }
+}
+
+impl<'a> FromValueOptional<'a> for DriveStartStopType {
+    unsafe fn from_value_optional(value: &Value) -> Option<Self> {
+        Some(FromValue::from_value(value))
+    }
+}
+
+impl<'a> FromValue<'a> for DriveStartStopType {
+    unsafe fn from_value(value: &Value) -> Self {
+        from_glib(gobject_ffi::g_value_get_enum(value.to_glib_none().0))
+    }
+}
+
+impl SetValue for DriveStartStopType {
+    unsafe fn set_value(value: &mut Value, this: &Self) {
+        gobject_ffi::g_value_set_enum(value.to_glib_none_mut().0, this.to_glib())
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
+pub enum EmblemOrigin {
+    Unknown,
+    Device,
+    Livemetadata,
+    Tag,
+    #[doc(hidden)]
+    __Unknown(i32),
+}
+
+#[doc(hidden)]
+impl ToGlib for EmblemOrigin {
+    type GlibType = ffi::GEmblemOrigin;
+
+    fn to_glib(&self) -> ffi::GEmblemOrigin {
+        match *self {
+            EmblemOrigin::Unknown => ffi::G_EMBLEM_ORIGIN_UNKNOWN,
+            EmblemOrigin::Device => ffi::G_EMBLEM_ORIGIN_DEVICE,
+            EmblemOrigin::Livemetadata => ffi::G_EMBLEM_ORIGIN_LIVEMETADATA,
+            EmblemOrigin::Tag => ffi::G_EMBLEM_ORIGIN_TAG,
+            EmblemOrigin::__Unknown(value) => value
+        }
+    }
+}
+
+#[doc(hidden)]
+impl FromGlib<ffi::GEmblemOrigin> for EmblemOrigin {
+    fn from_glib(value: ffi::GEmblemOrigin) -> Self {
+        match value {
+            0 => EmblemOrigin::Unknown,
+            1 => EmblemOrigin::Device,
+            2 => EmblemOrigin::Livemetadata,
+            3 => EmblemOrigin::Tag,
+            value => EmblemOrigin::__Unknown(value),
+        }
+    }
+}
+
+impl StaticType for EmblemOrigin {
+    fn static_type() -> Type {
+        unsafe { from_glib(ffi::g_emblem_origin_get_type()) }
+    }
+}
+
+impl<'a> FromValueOptional<'a> for EmblemOrigin {
+    unsafe fn from_value_optional(value: &Value) -> Option<Self> {
+        Some(FromValue::from_value(value))
+    }
+}
+
+impl<'a> FromValue<'a> for EmblemOrigin {
+    unsafe fn from_value(value: &Value) -> Self {
+        from_glib(gobject_ffi::g_value_get_enum(value.to_glib_none().0))
+    }
+}
+
+impl SetValue for EmblemOrigin {
+    unsafe fn set_value(value: &mut Value, this: &Self) {
+        gobject_ffi::g_value_set_enum(value.to_glib_none_mut().0, this.to_glib())
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
+pub enum FileMonitorEvent {
+    Changed,
+    ChangesDoneHint,
+    Deleted,
+    Created,
+    AttributeChanged,
+    PreUnmount,
+    Unmounted,
+    Moved,
+    Renamed,
+    MovedIn,
+    MovedOut,
+    #[doc(hidden)]
+    __Unknown(i32),
+}
+
+#[doc(hidden)]
+impl ToGlib for FileMonitorEvent {
+    type GlibType = ffi::GFileMonitorEvent;
+
+    fn to_glib(&self) -> ffi::GFileMonitorEvent {
+        match *self {
+            FileMonitorEvent::Changed => ffi::G_FILE_MONITOR_EVENT_CHANGED,
+            FileMonitorEvent::ChangesDoneHint => ffi::G_FILE_MONITOR_EVENT_CHANGES_DONE_HINT,
+            FileMonitorEvent::Deleted => ffi::G_FILE_MONITOR_EVENT_DELETED,
+            FileMonitorEvent::Created => ffi::G_FILE_MONITOR_EVENT_CREATED,
+            FileMonitorEvent::AttributeChanged => ffi::G_FILE_MONITOR_EVENT_ATTRIBUTE_CHANGED,
+            FileMonitorEvent::PreUnmount => ffi::G_FILE_MONITOR_EVENT_PRE_UNMOUNT,
+            FileMonitorEvent::Unmounted => ffi::G_FILE_MONITOR_EVENT_UNMOUNTED,
+            FileMonitorEvent::Moved => ffi::G_FILE_MONITOR_EVENT_MOVED,
+            FileMonitorEvent::Renamed => ffi::G_FILE_MONITOR_EVENT_RENAMED,
+            FileMonitorEvent::MovedIn => ffi::G_FILE_MONITOR_EVENT_MOVED_IN,
+            FileMonitorEvent::MovedOut => ffi::G_FILE_MONITOR_EVENT_MOVED_OUT,
+            FileMonitorEvent::__Unknown(value) => value
+        }
+    }
+}
+
+#[doc(hidden)]
+impl FromGlib<ffi::GFileMonitorEvent> for FileMonitorEvent {
+    fn from_glib(value: ffi::GFileMonitorEvent) -> Self {
+        match value {
+            0 => FileMonitorEvent::Changed,
+            1 => FileMonitorEvent::ChangesDoneHint,
+            2 => FileMonitorEvent::Deleted,
+            3 => FileMonitorEvent::Created,
+            4 => FileMonitorEvent::AttributeChanged,
+            5 => FileMonitorEvent::PreUnmount,
+            6 => FileMonitorEvent::Unmounted,
+            7 => FileMonitorEvent::Moved,
+            8 => FileMonitorEvent::Renamed,
+            9 => FileMonitorEvent::MovedIn,
+            10 => FileMonitorEvent::MovedOut,
+            value => FileMonitorEvent::__Unknown(value),
+        }
+    }
+}
+
+impl StaticType for FileMonitorEvent {
+    fn static_type() -> Type {
+        unsafe { from_glib(ffi::g_file_monitor_event_get_type()) }
+    }
+}
+
+impl<'a> FromValueOptional<'a> for FileMonitorEvent {
+    unsafe fn from_value_optional(value: &Value) -> Option<Self> {
+        Some(FromValue::from_value(value))
+    }
+}
+
+impl<'a> FromValue<'a> for FileMonitorEvent {
+    unsafe fn from_value(value: &Value) -> Self {
+        from_glib(gobject_ffi::g_value_get_enum(value.to_glib_none().0))
+    }
+}
+
+impl SetValue for FileMonitorEvent {
+    unsafe fn set_value(value: &mut Value, this: &Self) {
+        gobject_ffi::g_value_set_enum(value.to_glib_none_mut().0, this.to_glib())
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
 pub enum FileType {
     Unknown,
     Regular,
@@ -206,7 +554,8 @@ impl SetValue for FileType {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
 pub enum IOErrorEnum {
     Failed,
     NotFound,
@@ -374,8 +723,8 @@ impl FromGlib<ffi::GIOErrorEnum> for IOErrorEnum {
 }
 
 impl ErrorDomain for IOErrorEnum {
-    fn domain() -> glib_ffi::GQuark {
-        unsafe { ffi::g_io_error_quark() }
+    fn domain() -> Quark {
+        unsafe { from_glib(ffi::g_io_error_quark()) }
     }
 
     fn code(self) -> i32 {
@@ -460,7 +809,8 @@ impl SetValue for IOErrorEnum {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
 pub enum MountOperationResult {
     Handled,
     Aborted,
@@ -519,8 +869,79 @@ impl SetValue for MountOperationResult {
     }
 }
 
+#[cfg(any(feature = "v2_44", feature = "dox"))]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
+pub enum NetworkConnectivity {
+    Local,
+    Limited,
+    Portal,
+    Full,
+    #[doc(hidden)]
+    __Unknown(i32),
+}
+
+#[cfg(any(feature = "v2_44", feature = "dox"))]
+#[doc(hidden)]
+impl ToGlib for NetworkConnectivity {
+    type GlibType = ffi::GNetworkConnectivity;
+
+    fn to_glib(&self) -> ffi::GNetworkConnectivity {
+        match *self {
+            NetworkConnectivity::Local => ffi::G_NETWORK_CONNECTIVITY_LOCAL,
+            NetworkConnectivity::Limited => ffi::G_NETWORK_CONNECTIVITY_LIMITED,
+            NetworkConnectivity::Portal => ffi::G_NETWORK_CONNECTIVITY_PORTAL,
+            NetworkConnectivity::Full => ffi::G_NETWORK_CONNECTIVITY_FULL,
+            NetworkConnectivity::__Unknown(value) => value
+        }
+    }
+}
+
+#[cfg(any(feature = "v2_44", feature = "dox"))]
+#[doc(hidden)]
+impl FromGlib<ffi::GNetworkConnectivity> for NetworkConnectivity {
+    fn from_glib(value: ffi::GNetworkConnectivity) -> Self {
+        match value {
+            1 => NetworkConnectivity::Local,
+            2 => NetworkConnectivity::Limited,
+            3 => NetworkConnectivity::Portal,
+            4 => NetworkConnectivity::Full,
+            value => NetworkConnectivity::__Unknown(value),
+        }
+    }
+}
+
+#[cfg(any(feature = "v2_44", feature = "dox"))]
+impl StaticType for NetworkConnectivity {
+    fn static_type() -> Type {
+        unsafe { from_glib(ffi::g_network_connectivity_get_type()) }
+    }
+}
+
+#[cfg(any(feature = "v2_44", feature = "dox"))]
+impl<'a> FromValueOptional<'a> for NetworkConnectivity {
+    unsafe fn from_value_optional(value: &Value) -> Option<Self> {
+        Some(FromValue::from_value(value))
+    }
+}
+
+#[cfg(any(feature = "v2_44", feature = "dox"))]
+impl<'a> FromValue<'a> for NetworkConnectivity {
+    unsafe fn from_value(value: &Value) -> Self {
+        from_glib(gobject_ffi::g_value_get_enum(value.to_glib_none().0))
+    }
+}
+
+#[cfg(any(feature = "v2_44", feature = "dox"))]
+impl SetValue for NetworkConnectivity {
+    unsafe fn set_value(value: &mut Value, this: &Self) {
+        gobject_ffi::g_value_set_enum(value.to_glib_none_mut().0, this.to_glib())
+    }
+}
+
 #[cfg(any(feature = "v2_42", feature = "dox"))]
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
 pub enum NotificationPriority {
     Normal,
     Low,
@@ -588,7 +1009,8 @@ impl SetValue for NotificationPriority {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
 pub enum PasswordSave {
     Never,
     ForSession,
@@ -648,7 +1070,8 @@ impl SetValue for PasswordSave {
 }
 
 #[cfg(any(feature = "v2_34", feature = "dox"))]
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
 pub enum ResolverRecordType {
     Srv,
     Mx,
@@ -719,7 +1142,8 @@ impl SetValue for ResolverRecordType {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
 pub enum ResourceError {
     NotFound,
     Internal,
@@ -752,8 +1176,8 @@ impl FromGlib<ffi::GResourceError> for ResourceError {
 }
 
 impl ErrorDomain for ResourceError {
-    fn domain() -> glib_ffi::GQuark {
-        unsafe { ffi::g_resource_error_quark() }
+    fn domain() -> Quark {
+        unsafe { from_glib(ffi::g_resource_error_quark()) }
     }
 
     fn code(self) -> i32 {
@@ -793,7 +1217,8 @@ impl SetValue for ResourceError {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
 pub enum SocketClientEvent {
     Resolving,
     Resolved,
@@ -870,7 +1295,8 @@ impl SetValue for SocketClientEvent {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
 pub enum SocketFamily {
     Invalid,
     Unix,
@@ -933,7 +1359,8 @@ impl SetValue for SocketFamily {
 }
 
 #[cfg(any(feature = "v2_46", feature = "dox"))]
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
 pub enum SocketListenerEvent {
     Binding,
     Bound,
@@ -1001,7 +1428,8 @@ impl SetValue for SocketListenerEvent {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
 pub enum SocketProtocol {
     Unknown,
     Default,
@@ -1066,7 +1494,8 @@ impl SetValue for SocketProtocol {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
 pub enum SocketType {
     Invalid,
     Stream,
@@ -1128,7 +1557,8 @@ impl SetValue for SocketType {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
 pub enum TlsAuthenticationMode {
     None,
     Requested,
@@ -1188,7 +1618,8 @@ impl SetValue for TlsAuthenticationMode {
 }
 
 #[cfg(any(feature = "v2_40", feature = "dox"))]
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
 pub enum TlsCertificateRequestFlags {
     None,
     #[doc(hidden)]
@@ -1247,7 +1678,8 @@ impl SetValue for TlsCertificateRequestFlags {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
 pub enum TlsDatabaseLookupFlags {
     None,
     Keypair,
@@ -1303,7 +1735,8 @@ impl SetValue for TlsDatabaseLookupFlags {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
 pub enum TlsInteractionResult {
     Unhandled,
     Handled,
@@ -1362,7 +1795,8 @@ impl SetValue for TlsInteractionResult {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
 pub enum TlsRehandshakeMode {
     Never,
     Safely,
@@ -1416,6 +1850,132 @@ impl<'a> FromValue<'a> for TlsRehandshakeMode {
 }
 
 impl SetValue for TlsRehandshakeMode {
+    unsafe fn set_value(value: &mut Value, this: &Self) {
+        gobject_ffi::g_value_set_enum(value.to_glib_none_mut().0, this.to_glib())
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
+pub enum UnixSocketAddressType {
+    Invalid,
+    Anonymous,
+    Path,
+    Abstract,
+    AbstractPadded,
+    #[doc(hidden)]
+    __Unknown(i32),
+}
+
+#[doc(hidden)]
+impl ToGlib for UnixSocketAddressType {
+    type GlibType = ffi::GUnixSocketAddressType;
+
+    fn to_glib(&self) -> ffi::GUnixSocketAddressType {
+        match *self {
+            UnixSocketAddressType::Invalid => ffi::G_UNIX_SOCKET_ADDRESS_INVALID,
+            UnixSocketAddressType::Anonymous => ffi::G_UNIX_SOCKET_ADDRESS_ANONYMOUS,
+            UnixSocketAddressType::Path => ffi::G_UNIX_SOCKET_ADDRESS_PATH,
+            UnixSocketAddressType::Abstract => ffi::G_UNIX_SOCKET_ADDRESS_ABSTRACT,
+            UnixSocketAddressType::AbstractPadded => ffi::G_UNIX_SOCKET_ADDRESS_ABSTRACT_PADDED,
+            UnixSocketAddressType::__Unknown(value) => value
+        }
+    }
+}
+
+#[doc(hidden)]
+impl FromGlib<ffi::GUnixSocketAddressType> for UnixSocketAddressType {
+    fn from_glib(value: ffi::GUnixSocketAddressType) -> Self {
+        match value {
+            0 => UnixSocketAddressType::Invalid,
+            1 => UnixSocketAddressType::Anonymous,
+            2 => UnixSocketAddressType::Path,
+            3 => UnixSocketAddressType::Abstract,
+            4 => UnixSocketAddressType::AbstractPadded,
+            value => UnixSocketAddressType::__Unknown(value),
+        }
+    }
+}
+
+impl StaticType for UnixSocketAddressType {
+    fn static_type() -> Type {
+        unsafe { from_glib(ffi::g_unix_socket_address_type_get_type()) }
+    }
+}
+
+impl<'a> FromValueOptional<'a> for UnixSocketAddressType {
+    unsafe fn from_value_optional(value: &Value) -> Option<Self> {
+        Some(FromValue::from_value(value))
+    }
+}
+
+impl<'a> FromValue<'a> for UnixSocketAddressType {
+    unsafe fn from_value(value: &Value) -> Self {
+        from_glib(gobject_ffi::g_value_get_enum(value.to_glib_none().0))
+    }
+}
+
+impl SetValue for UnixSocketAddressType {
+    unsafe fn set_value(value: &mut Value, this: &Self) {
+        gobject_ffi::g_value_set_enum(value.to_glib_none_mut().0, this.to_glib())
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy)]
+pub enum ZlibCompressorFormat {
+    Zlib,
+    Gzip,
+    Raw,
+    #[doc(hidden)]
+    __Unknown(i32),
+}
+
+#[doc(hidden)]
+impl ToGlib for ZlibCompressorFormat {
+    type GlibType = ffi::GZlibCompressorFormat;
+
+    fn to_glib(&self) -> ffi::GZlibCompressorFormat {
+        match *self {
+            ZlibCompressorFormat::Zlib => ffi::G_ZLIB_COMPRESSOR_FORMAT_ZLIB,
+            ZlibCompressorFormat::Gzip => ffi::G_ZLIB_COMPRESSOR_FORMAT_GZIP,
+            ZlibCompressorFormat::Raw => ffi::G_ZLIB_COMPRESSOR_FORMAT_RAW,
+            ZlibCompressorFormat::__Unknown(value) => value
+        }
+    }
+}
+
+#[doc(hidden)]
+impl FromGlib<ffi::GZlibCompressorFormat> for ZlibCompressorFormat {
+    fn from_glib(value: ffi::GZlibCompressorFormat) -> Self {
+        match value {
+            0 => ZlibCompressorFormat::Zlib,
+            1 => ZlibCompressorFormat::Gzip,
+            2 => ZlibCompressorFormat::Raw,
+            value => ZlibCompressorFormat::__Unknown(value),
+        }
+    }
+}
+
+impl StaticType for ZlibCompressorFormat {
+    fn static_type() -> Type {
+        unsafe { from_glib(ffi::g_zlib_compressor_format_get_type()) }
+    }
+}
+
+impl<'a> FromValueOptional<'a> for ZlibCompressorFormat {
+    unsafe fn from_value_optional(value: &Value) -> Option<Self> {
+        Some(FromValue::from_value(value))
+    }
+}
+
+impl<'a> FromValue<'a> for ZlibCompressorFormat {
+    unsafe fn from_value(value: &Value) -> Self {
+        from_glib(gobject_ffi::g_value_get_enum(value.to_glib_none().0))
+    }
+}
+
+impl SetValue for ZlibCompressorFormat {
     unsafe fn set_value(value: &mut Value, this: &Self) {
         gobject_ffi::g_value_set_enum(value.to_glib_none_mut().0, this.to_glib())
     }

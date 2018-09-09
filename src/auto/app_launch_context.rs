@@ -18,6 +18,7 @@ use glib_ffi;
 use gobject_ffi;
 #[cfg(any(feature = "v2_36", feature = "dox"))]
 use libc;
+use std;
 #[cfg(any(feature = "v2_36", feature = "dox"))]
 use std::boxed::Box as Box_;
 use std::mem;
@@ -50,15 +51,15 @@ impl Default for AppLaunchContext {
 pub trait AppLaunchContextExt {
     fn get_display<P: IsA<AppInfo>>(&self, info: &P, files: &[File]) -> Option<String>;
 
-    fn get_environment(&self) -> Vec<String>;
+    fn get_environment(&self) -> Vec<std::ffi::OsString>;
 
     fn get_startup_notify_id<P: IsA<AppInfo>>(&self, info: &P, files: &[File]) -> Option<String>;
 
     fn launch_failed(&self, startup_notify_id: &str);
 
-    fn setenv(&self, variable: &str, value: &str);
+    fn setenv<P: AsRef<std::ffi::OsStr>, Q: AsRef<std::ffi::OsStr>>(&self, variable: P, value: Q);
 
-    fn unsetenv(&self, variable: &str);
+    fn unsetenv<P: AsRef<std::ffi::OsStr>>(&self, variable: P);
 
     #[cfg(any(feature = "v2_36", feature = "dox"))]
     fn connect_launch_failed<F: Fn(&Self, &str) + 'static>(&self, f: F) -> SignalHandlerId;
@@ -74,7 +75,7 @@ impl<O: IsA<AppLaunchContext> + IsA<glib::object::Object>> AppLaunchContextExt f
         }
     }
 
-    fn get_environment(&self) -> Vec<String> {
+    fn get_environment(&self) -> Vec<std::ffi::OsString> {
         unsafe {
             FromGlibPtrContainer::from_glib_full(ffi::g_app_launch_context_get_environment(self.to_glib_none().0))
         }
@@ -92,15 +93,15 @@ impl<O: IsA<AppLaunchContext> + IsA<glib::object::Object>> AppLaunchContextExt f
         }
     }
 
-    fn setenv(&self, variable: &str, value: &str) {
+    fn setenv<P: AsRef<std::ffi::OsStr>, Q: AsRef<std::ffi::OsStr>>(&self, variable: P, value: Q) {
         unsafe {
-            ffi::g_app_launch_context_setenv(self.to_glib_none().0, variable.to_glib_none().0, value.to_glib_none().0);
+            ffi::g_app_launch_context_setenv(self.to_glib_none().0, variable.as_ref().to_glib_none().0, value.as_ref().to_glib_none().0);
         }
     }
 
-    fn unsetenv(&self, variable: &str) {
+    fn unsetenv<P: AsRef<std::ffi::OsStr>>(&self, variable: P) {
         unsafe {
-            ffi::g_app_launch_context_unsetenv(self.to_glib_none().0, variable.to_glib_none().0);
+            ffi::g_app_launch_context_unsetenv(self.to_glib_none().0, variable.as_ref().to_glib_none().0);
         }
     }
 
@@ -126,7 +127,6 @@ impl<O: IsA<AppLaunchContext> + IsA<glib::object::Object>> AppLaunchContextExt f
 #[cfg(any(feature = "v2_36", feature = "dox"))]
 unsafe extern "C" fn launch_failed_trampoline<P>(this: *mut ffi::GAppLaunchContext, startup_notify_id: *mut libc::c_char, f: glib_ffi::gpointer)
 where P: IsA<AppLaunchContext> {
-    callback_guard!();
     let f: &&(Fn(&P, &str) + 'static) = transmute(f);
     f(&AppLaunchContext::from_glib_borrow(this).downcast_unchecked(), &String::from_glib_none(startup_notify_id))
 }
@@ -134,7 +134,6 @@ where P: IsA<AppLaunchContext> {
 #[cfg(any(feature = "v2_36", feature = "dox"))]
 unsafe extern "C" fn launched_trampoline<P>(this: *mut ffi::GAppLaunchContext, info: *mut ffi::GAppInfo, platform_data: *mut glib_ffi::GVariant, f: glib_ffi::gpointer)
 where P: IsA<AppLaunchContext> {
-    callback_guard!();
     let f: &&(Fn(&P, &AppInfo, &glib::Variant) + 'static) = transmute(f);
     f(&AppLaunchContext::from_glib_borrow(this).downcast_unchecked(), &from_glib_borrow(info), &from_glib_borrow(platform_data))
 }

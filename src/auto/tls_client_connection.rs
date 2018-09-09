@@ -49,12 +49,14 @@ pub trait TlsClientConnectionExt {
 
     fn get_server_identity(&self) -> Option<SocketConnectable>;
 
+    #[cfg_attr(feature = "v2_56", deprecated)]
     fn get_use_ssl3(&self) -> bool;
 
     fn get_validation_flags(&self) -> TlsCertificateFlags;
 
     fn set_server_identity<P: IsA<SocketConnectable>>(&self, identity: &P);
 
+    #[cfg_attr(feature = "v2_56", deprecated)]
     fn set_use_ssl3(&self, use_ssl3: bool);
 
     fn set_validation_flags(&self, flags: TlsCertificateFlags);
@@ -63,6 +65,7 @@ pub trait TlsClientConnectionExt {
 
     fn connect_property_server_identity_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
 
+    #[cfg_attr(feature = "v2_56", deprecated)]
     fn connect_property_use_ssl3_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
 
     fn connect_property_validation_flags_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
@@ -151,28 +154,24 @@ impl<O: IsA<TlsClientConnection> + IsA<glib::object::Object>> TlsClientConnectio
 
 unsafe extern "C" fn notify_accepted_cas_trampoline<P>(this: *mut ffi::GTlsClientConnection, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<TlsClientConnection> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&TlsClientConnection::from_glib_borrow(this).downcast_unchecked())
 }
 
 unsafe extern "C" fn notify_server_identity_trampoline<P>(this: *mut ffi::GTlsClientConnection, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<TlsClientConnection> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&TlsClientConnection::from_glib_borrow(this).downcast_unchecked())
 }
 
 unsafe extern "C" fn notify_use_ssl3_trampoline<P>(this: *mut ffi::GTlsClientConnection, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<TlsClientConnection> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&TlsClientConnection::from_glib_borrow(this).downcast_unchecked())
 }
 
 unsafe extern "C" fn notify_validation_flags_trampoline<P>(this: *mut ffi::GTlsClientConnection, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<TlsClientConnection> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&TlsClientConnection::from_glib_borrow(this).downcast_unchecked())
 }

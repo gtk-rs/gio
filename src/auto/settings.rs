@@ -3,6 +3,7 @@
 // DO NOT EDIT
 
 use Action;
+use SettingsBackend;
 use SettingsBindFlags;
 use SettingsSchema;
 use ffi;
@@ -38,17 +39,27 @@ impl Settings {
         }
     }
 
-    //pub fn new_full<'a, 'b, P: Into<Option<&'a /*Ignored*/SettingsBackend>>, Q: Into<Option<&'b str>>>(schema: &SettingsSchema, backend: P, path: Q) -> Settings {
-    //    unsafe { TODO: call ffi::g_settings_new_full() }
-    //}
+    pub fn new_full<'a, 'b, P: Into<Option<&'a SettingsBackend>>, Q: Into<Option<&'b str>>>(schema: &SettingsSchema, backend: P, path: Q) -> Settings {
+        let backend = backend.into();
+        let backend = backend.to_glib_none();
+        let path = path.into();
+        let path = path.to_glib_none();
+        unsafe {
+            from_glib_full(ffi::g_settings_new_full(schema.to_glib_none().0, backend.0, path.0))
+        }
+    }
 
-    //pub fn new_with_backend(schema_id: &str, backend: /*Ignored*/&SettingsBackend) -> Settings {
-    //    unsafe { TODO: call ffi::g_settings_new_with_backend() }
-    //}
+    pub fn new_with_backend(schema_id: &str, backend: &SettingsBackend) -> Settings {
+        unsafe {
+            from_glib_full(ffi::g_settings_new_with_backend(schema_id.to_glib_none().0, backend.to_glib_none().0))
+        }
+    }
 
-    //pub fn new_with_backend_and_path(schema_id: &str, backend: /*Ignored*/&SettingsBackend, path: &str) -> Settings {
-    //    unsafe { TODO: call ffi::g_settings_new_with_backend_and_path() }
-    //}
+    pub fn new_with_backend_and_path(schema_id: &str, backend: &SettingsBackend, path: &str) -> Settings {
+        unsafe {
+            from_glib_full(ffi::g_settings_new_with_backend_and_path(schema_id.to_glib_none().0, backend.to_glib_none().0, path.to_glib_none().0))
+        }
+    }
 
     pub fn new_with_path(schema_id: &str, path: &str) -> Settings {
         unsafe {
@@ -88,7 +99,7 @@ pub trait SettingsExt {
 
     fn bind<P: IsA<glib::Object>>(&self, key: &str, object: &P, property: &str, flags: SettingsBindFlags);
 
-    //fn bind_with_mapping<P: IsA<glib::Object>, Q: Into<Option</*Unimplemented*/Fundamental: Pointer>>>(&self, key: &str, object: &P, property: &str, flags: SettingsBindFlags, get_mapping: /*Unknown conversion*//*Unimplemented*/SettingsBindGetMapping, set_mapping: /*Unknown conversion*//*Unimplemented*/SettingsBindSetMapping, user_data: Q, destroy: /*Unknown conversion*//*Unimplemented*/DestroyNotify);
+    //fn bind_with_mapping<P: IsA<glib::Object>>(&self, key: &str, object: &P, property: &str, flags: SettingsBindFlags, get_mapping: /*Unknown conversion*//*Unimplemented*/SettingsBindGetMapping, set_mapping: /*Unknown conversion*//*Unimplemented*/SettingsBindSetMapping, destroy: /*Unknown conversion*//*Unimplemented*/DestroyNotify);
 
     fn bind_writable<P: IsA<glib::Object>>(&self, key: &str, object: &P, property: &str, inverted: bool);
 
@@ -176,7 +187,7 @@ pub trait SettingsExt {
 
     fn set_value(&self, key: &str, value: &glib::Variant) -> bool;
 
-    //fn get_property_backend(&self) -> /*Ignored*/Option<SettingsBackend>;
+    fn get_property_backend(&self) -> Option<SettingsBackend>;
 
     fn get_property_delay_apply(&self) -> bool;
 
@@ -226,7 +237,7 @@ impl<O: IsA<Settings> + IsA<glib::object::Object>> SettingsExt for O {
         }
     }
 
-    //fn bind_with_mapping<P: IsA<glib::Object>, Q: Into<Option</*Unimplemented*/Fundamental: Pointer>>>(&self, key: &str, object: &P, property: &str, flags: SettingsBindFlags, get_mapping: /*Unknown conversion*//*Unimplemented*/SettingsBindGetMapping, set_mapping: /*Unknown conversion*//*Unimplemented*/SettingsBindSetMapping, user_data: Q, destroy: /*Unknown conversion*//*Unimplemented*/DestroyNotify) {
+    //fn bind_with_mapping<P: IsA<glib::Object>>(&self, key: &str, object: &P, property: &str, flags: SettingsBindFlags, get_mapping: /*Unknown conversion*//*Unimplemented*/SettingsBindGetMapping, set_mapping: /*Unknown conversion*//*Unimplemented*/SettingsBindSetMapping, destroy: /*Unknown conversion*//*Unimplemented*/DestroyNotify) {
     //    unsafe { TODO: call ffi::g_settings_bind_with_mapping() }
     //}
 
@@ -464,13 +475,13 @@ impl<O: IsA<Settings> + IsA<glib::object::Object>> SettingsExt for O {
         }
     }
 
-    //fn get_property_backend(&self) -> /*Ignored*/Option<SettingsBackend> {
-    //    unsafe {
-    //        let mut value = Value::from_type(</*Unknown type*/ as StaticType>::static_type());
-    //        gobject_ffi::g_object_get_property(self.to_glib_none().0, "backend".to_glib_none().0, value.to_glib_none_mut().0);
-    //        value.get()
-    //    }
-    //}
+    fn get_property_backend(&self) -> Option<SettingsBackend> {
+        unsafe {
+            let mut value = Value::from_type(<SettingsBackend as StaticType>::static_type());
+            gobject_ffi::g_object_get_property(self.to_glib_none().0, "backend".to_glib_none().0, value.to_glib_none_mut().0);
+            value.get()
+        }
+    }
 
     fn get_property_delay_apply(&self) -> bool {
         unsafe {
@@ -599,70 +610,60 @@ impl<O: IsA<Settings> + IsA<glib::object::Object>> SettingsExt for O {
 
 unsafe extern "C" fn changed_trampoline<P>(this: *mut ffi::GSettings, key: *mut libc::c_char, f: glib_ffi::gpointer)
 where P: IsA<Settings> {
-    callback_guard!();
     let f: &&(Fn(&P, &str) + 'static) = transmute(f);
     f(&Settings::from_glib_borrow(this).downcast_unchecked(), &String::from_glib_none(key))
 }
 
 unsafe extern "C" fn writable_change_event_trampoline<P>(this: *mut ffi::GSettings, key: libc::c_uint, f: glib_ffi::gpointer) -> glib_ffi::gboolean
 where P: IsA<Settings> {
-    callback_guard!();
     let f: &&(Fn(&P, u32) -> Inhibit + 'static) = transmute(f);
     f(&Settings::from_glib_borrow(this).downcast_unchecked(), key).to_glib()
 }
 
 unsafe extern "C" fn writable_changed_trampoline<P>(this: *mut ffi::GSettings, key: *mut libc::c_char, f: glib_ffi::gpointer)
 where P: IsA<Settings> {
-    callback_guard!();
     let f: &&(Fn(&P, &str) + 'static) = transmute(f);
     f(&Settings::from_glib_borrow(this).downcast_unchecked(), &String::from_glib_none(key))
 }
 
 unsafe extern "C" fn notify_backend_trampoline<P>(this: *mut ffi::GSettings, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<Settings> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&Settings::from_glib_borrow(this).downcast_unchecked())
 }
 
 unsafe extern "C" fn notify_delay_apply_trampoline<P>(this: *mut ffi::GSettings, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<Settings> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&Settings::from_glib_borrow(this).downcast_unchecked())
 }
 
 unsafe extern "C" fn notify_has_unapplied_trampoline<P>(this: *mut ffi::GSettings, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<Settings> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&Settings::from_glib_borrow(this).downcast_unchecked())
 }
 
 unsafe extern "C" fn notify_path_trampoline<P>(this: *mut ffi::GSettings, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<Settings> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&Settings::from_glib_borrow(this).downcast_unchecked())
 }
 
 unsafe extern "C" fn notify_schema_trampoline<P>(this: *mut ffi::GSettings, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<Settings> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&Settings::from_glib_borrow(this).downcast_unchecked())
 }
 
 unsafe extern "C" fn notify_schema_id_trampoline<P>(this: *mut ffi::GSettings, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<Settings> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&Settings::from_glib_borrow(this).downcast_unchecked())
 }
 
 unsafe extern "C" fn notify_settings_schema_trampoline<P>(this: *mut ffi::GSettings, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<Settings> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&Settings::from_glib_borrow(this).downcast_unchecked())
 }

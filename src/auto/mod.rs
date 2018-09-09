@@ -18,6 +18,13 @@ mod app_info;
 pub use self::app_info::AppInfo;
 pub use self::app_info::AppInfoExt;
 
+#[cfg(any(feature = "v2_40", feature = "dox"))]
+mod app_info_monitor;
+#[cfg(any(feature = "v2_40", feature = "dox"))]
+pub use self::app_info_monitor::AppInfoMonitor;
+#[cfg(any(feature = "v2_40", feature = "dox"))]
+pub use self::app_info_monitor::AppInfoMonitorExt;
+
 mod app_launch_context;
 pub use self::app_launch_context::AppLaunchContext;
 pub use self::app_launch_context::AppLaunchContextExt;
@@ -25,6 +32,10 @@ pub use self::app_launch_context::AppLaunchContextExt;
 mod application;
 pub use self::application::Application;
 pub use self::application::ApplicationExt;
+
+mod application_command_line;
+pub use self::application_command_line::ApplicationCommandLine;
+pub use self::application_command_line::ApplicationCommandLineExt;
 
 mod buffered_input_stream;
 pub use self::buffered_input_stream::BufferedInputStream;
@@ -34,9 +45,35 @@ mod buffered_output_stream;
 pub use self::buffered_output_stream::BufferedOutputStream;
 pub use self::buffered_output_stream::BufferedOutputStreamExt;
 
+#[cfg(any(feature = "v2_38", feature = "dox"))]
+mod bytes_icon;
+#[cfg(any(feature = "v2_38", feature = "dox"))]
+pub use self::bytes_icon::BytesIcon;
+#[cfg(any(feature = "v2_38", feature = "dox"))]
+pub use self::bytes_icon::BytesIconExt;
+
 mod cancellable;
 pub use self::cancellable::Cancellable;
-pub use self::cancellable::CancellableExt;
+
+mod charset_converter;
+pub use self::charset_converter::CharsetConverter;
+pub use self::charset_converter::CharsetConverterExt;
+
+mod converter;
+pub use self::converter::Converter;
+pub use self::converter::ConverterExt;
+
+mod converter_input_stream;
+pub use self::converter_input_stream::ConverterInputStream;
+pub use self::converter_input_stream::ConverterInputStreamExt;
+
+mod converter_output_stream;
+pub use self::converter_output_stream::ConverterOutputStream;
+pub use self::converter_output_stream::ConverterOutputStreamExt;
+
+mod credentials;
+pub use self::credentials::Credentials;
+pub use self::credentials::CredentialsExt;
 
 mod data_input_stream;
 pub use self::data_input_stream::DataInputStream;
@@ -46,13 +83,36 @@ mod data_output_stream;
 pub use self::data_output_stream::DataOutputStream;
 pub use self::data_output_stream::DataOutputStreamExt;
 
+#[cfg(any(not(windows), feature = "dox"))]
+mod desktop_app_info;
+#[cfg(any(not(windows), feature = "dox"))]
+pub use self::desktop_app_info::DesktopAppInfo;
+#[cfg(any(not(windows), feature = "dox"))]
+pub use self::desktop_app_info::DesktopAppInfoExt;
+
+mod drive;
+pub use self::drive::Drive;
+pub use self::drive::DriveExt;
+
+mod emblem;
+pub use self::emblem::Emblem;
+pub use self::emblem::EmblemExt;
+
+mod emblemed_icon;
+pub use self::emblemed_icon::EmblemedIcon;
+pub use self::emblemed_icon::EmblemedIconExt;
+
 mod file;
 pub use self::file::File;
 pub use self::file::FileExt;
 
-mod file_i_o_stream;
-pub use self::file_i_o_stream::FileIOStream;
-pub use self::file_i_o_stream::FileIOStreamExt;
+mod file_io_stream;
+pub use self::file_io_stream::FileIOStream;
+pub use self::file_io_stream::FileIOStreamExt;
+
+mod file_icon;
+pub use self::file_icon::FileIcon;
+pub use self::file_icon::FileIconExt;
 
 mod file_info;
 pub use self::file_info::FileInfo;
@@ -62,9 +122,17 @@ mod file_input_stream;
 pub use self::file_input_stream::FileInputStream;
 pub use self::file_input_stream::FileInputStreamExt;
 
+mod file_monitor;
+pub use self::file_monitor::FileMonitor;
+pub use self::file_monitor::FileMonitorExt;
+
 mod file_output_stream;
 pub use self::file_output_stream::FileOutputStream;
 pub use self::file_output_stream::FileOutputStreamExt;
+
+mod filename_completer;
+pub use self::filename_completer::FilenameCompleter;
+pub use self::filename_completer::FilenameCompleterExt;
 
 mod filter_input_stream;
 pub use self::filter_input_stream::FilterInputStream;
@@ -74,9 +142,9 @@ mod filter_output_stream;
 pub use self::filter_output_stream::FilterOutputStream;
 pub use self::filter_output_stream::FilterOutputStreamExt;
 
-mod i_o_stream;
-pub use self::i_o_stream::IOStream;
-pub use self::i_o_stream::IOStreamExt;
+mod io_stream;
+pub use self::io_stream::IOStream;
+pub use self::io_stream::IOStreamExt;
 
 mod icon;
 pub use self::icon::Icon;
@@ -86,6 +154,10 @@ mod inet_address;
 pub use self::inet_address::InetAddress;
 pub use self::inet_address::InetAddressExt;
 
+mod inet_address_mask;
+pub use self::inet_address_mask::InetAddressMask;
+pub use self::inet_address_mask::InetAddressMaskExt;
+
 mod inet_socket_address;
 pub use self::inet_socket_address::InetSocketAddress;
 pub use self::inet_socket_address::InetSocketAddressExt;
@@ -93,6 +165,24 @@ pub use self::inet_socket_address::InetSocketAddressExt;
 mod input_stream;
 pub use self::input_stream::InputStream;
 pub use self::input_stream::InputStreamExt;
+
+#[cfg(any(feature = "v2_44", feature = "dox"))]
+mod list_model;
+#[cfg(any(feature = "v2_44", feature = "dox"))]
+pub use self::list_model::ListModel;
+#[cfg(any(feature = "v2_44", feature = "dox"))]
+pub use self::list_model::ListModelExt;
+
+#[cfg(any(feature = "v2_44", feature = "dox"))]
+mod list_store;
+#[cfg(any(feature = "v2_44", feature = "dox"))]
+pub use self::list_store::ListStore;
+#[cfg(any(feature = "v2_44", feature = "dox"))]
+pub use self::list_store::ListStoreExt;
+
+mod loadable_icon;
+pub use self::loadable_icon::LoadableIcon;
+pub use self::loadable_icon::LoadableIconExt;
 
 mod memory_input_stream;
 pub use self::memory_input_stream::MemoryInputStream;
@@ -122,6 +212,10 @@ mod menu_model;
 pub use self::menu_model::MenuModel;
 pub use self::menu_model::MenuModelExt;
 
+mod mount;
+pub use self::mount::Mount;
+pub use self::mount::MountExt;
+
 mod mount_operation;
 pub use self::mount_operation::MountOperation;
 pub use self::mount_operation::MountOperationExt;
@@ -129,6 +223,10 @@ pub use self::mount_operation::MountOperationExt;
 mod network_address;
 pub use self::network_address::NetworkAddress;
 pub use self::network_address::NetworkAddressExt;
+
+mod network_monitor;
+pub use self::network_monitor::NetworkMonitor;
+pub use self::network_monitor::NetworkMonitorExt;
 
 mod network_service;
 pub use self::network_service::NetworkService;
@@ -149,6 +247,26 @@ mod permission;
 pub use self::permission::Permission;
 pub use self::permission::PermissionExt;
 
+mod pollable_input_stream;
+pub use self::pollable_input_stream::PollableInputStream;
+pub use self::pollable_input_stream::PollableInputStreamExt;
+
+mod pollable_output_stream;
+pub use self::pollable_output_stream::PollableOutputStream;
+pub use self::pollable_output_stream::PollableOutputStreamExt;
+
+mod proxy;
+pub use self::proxy::Proxy;
+pub use self::proxy::ProxyExt;
+
+mod proxy_address;
+pub use self::proxy_address::ProxyAddress;
+pub use self::proxy_address::ProxyAddressExt;
+
+mod proxy_resolver;
+pub use self::proxy_resolver::ProxyResolver;
+pub use self::proxy_resolver::ProxyResolverExt;
+
 mod resolver;
 pub use self::resolver::Resolver;
 pub use self::resolver::ResolverExt;
@@ -161,6 +279,10 @@ mod settings;
 pub use self::settings::Settings;
 pub use self::settings::SettingsExt;
 
+mod settings_backend;
+pub use self::settings_backend::SettingsBackend;
+pub use self::settings_backend::SettingsBackendExt;
+
 mod simple_action;
 pub use self::simple_action::SimpleAction;
 pub use self::simple_action::SimpleActionExt;
@@ -170,9 +292,9 @@ pub use self::simple_action_group::SimpleActionGroup;
 pub use self::simple_action_group::SimpleActionGroupExt;
 
 #[cfg(any(feature = "v2_44", feature = "dox"))]
-mod simple_i_o_stream;
+mod simple_io_stream;
 #[cfg(any(feature = "v2_44", feature = "dox"))]
-pub use self::simple_i_o_stream::SimpleIOStream;
+pub use self::simple_io_stream::SimpleIOStream;
 
 mod simple_permission;
 pub use self::simple_permission::SimplePermission;
@@ -208,6 +330,20 @@ pub use self::socket_listener::SocketListenerExt;
 mod socket_service;
 pub use self::socket_service::SocketService;
 pub use self::socket_service::SocketServiceExt;
+
+#[cfg(any(feature = "v2_40", feature = "dox"))]
+mod subprocess;
+#[cfg(any(feature = "v2_40", feature = "dox"))]
+pub use self::subprocess::Subprocess;
+#[cfg(any(feature = "v2_40", feature = "dox"))]
+pub use self::subprocess::SubprocessExt;
+
+#[cfg(any(feature = "v2_40", feature = "dox"))]
+mod subprocess_launcher;
+#[cfg(any(feature = "v2_40", feature = "dox"))]
+pub use self::subprocess_launcher::SubprocessLauncher;
+#[cfg(any(feature = "v2_40", feature = "dox"))]
+pub use self::subprocess_launcher::SubprocessLauncherExt;
 
 mod tcp_connection;
 pub use self::tcp_connection::TcpConnection;
@@ -253,6 +389,33 @@ mod tls_server_connection;
 pub use self::tls_server_connection::TlsServerConnection;
 pub use self::tls_server_connection::TlsServerConnectionExt;
 
+#[cfg(any(unix, feature = "dox"))]
+mod unix_socket_address;
+#[cfg(any(unix, feature = "dox"))]
+pub use self::unix_socket_address::UnixSocketAddress;
+#[cfg(any(unix, feature = "dox"))]
+pub use self::unix_socket_address::UnixSocketAddressExt;
+
+mod vfs;
+pub use self::vfs::Vfs;
+pub use self::vfs::VfsExt;
+
+mod volume;
+pub use self::volume::Volume;
+pub use self::volume::VolumeExt;
+
+mod volume_monitor;
+pub use self::volume_monitor::VolumeMonitor;
+pub use self::volume_monitor::VolumeMonitorExt;
+
+mod zlib_compressor;
+pub use self::zlib_compressor::ZlibCompressor;
+pub use self::zlib_compressor::ZlibCompressorExt;
+
+mod zlib_decompressor;
+pub use self::zlib_decompressor::ZlibDecompressor;
+pub use self::zlib_decompressor::ZlibDecompressorExt;
+
 mod resource;
 pub use self::resource::Resource;
 
@@ -264,15 +427,25 @@ mod settings_schema_key;
 #[cfg(any(feature = "v2_40", feature = "dox"))]
 pub use self::settings_schema_key::SettingsSchemaKey;
 
+mod settings_schema_source;
+pub use self::settings_schema_source::SettingsSchemaSource;
+
 mod srv_target;
 pub use self::srv_target::SrvTarget;
 
 mod enums;
+pub use self::enums::ConverterResult;
+pub use self::enums::CredentialsType;
 pub use self::enums::DataStreamByteOrder;
 pub use self::enums::DataStreamNewlineType;
+pub use self::enums::DriveStartStopType;
+pub use self::enums::EmblemOrigin;
+pub use self::enums::FileMonitorEvent;
 pub use self::enums::FileType;
 pub use self::enums::IOErrorEnum;
 pub use self::enums::MountOperationResult;
+#[cfg(any(feature = "v2_44", feature = "dox"))]
+pub use self::enums::NetworkConnectivity;
 #[cfg(any(feature = "v2_42", feature = "dox"))]
 pub use self::enums::NotificationPriority;
 pub use self::enums::PasswordSave;
@@ -291,17 +464,26 @@ pub use self::enums::TlsCertificateRequestFlags;
 pub use self::enums::TlsDatabaseLookupFlags;
 pub use self::enums::TlsInteractionResult;
 pub use self::enums::TlsRehandshakeMode;
+pub use self::enums::UnixSocketAddressType;
+pub use self::enums::ZlibCompressorFormat;
 
 mod flags;
 pub use self::flags::AppInfoCreateFlags;
 pub use self::flags::ApplicationFlags;
 pub use self::flags::AskPasswordFlags;
+pub use self::flags::ConverterFlags;
+pub use self::flags::DriveStartFlags;
 pub use self::flags::FileCreateFlags;
+pub use self::flags::FileMonitorFlags;
 pub use self::flags::FileQueryInfoFlags;
 pub use self::flags::IOStreamSpliceFlags;
+pub use self::flags::MountMountFlags;
+pub use self::flags::MountUnmountFlags;
 pub use self::flags::OutputStreamSpliceFlags;
 pub use self::flags::ResourceLookupFlags;
 pub use self::flags::SettingsBindFlags;
+#[cfg(any(feature = "v2_40", feature = "dox"))]
+pub use self::flags::SubprocessFlags;
 pub use self::flags::TlsCertificateFlags;
 pub use self::flags::TlsDatabaseVerifyFlags;
 pub use self::flags::TlsPasswordFlags;
@@ -427,25 +609,48 @@ pub mod traits {
     pub use super::ActionGroupExt;
     pub use super::ActionMapExt;
     pub use super::AppInfoExt;
+    #[cfg(any(feature = "v2_40", feature = "dox"))]
+    pub use super::AppInfoMonitorExt;
     pub use super::AppLaunchContextExt;
     pub use super::ApplicationExt;
+    pub use super::ApplicationCommandLineExt;
     pub use super::BufferedInputStreamExt;
     pub use super::BufferedOutputStreamExt;
-    pub use super::CancellableExt;
+    #[cfg(any(feature = "v2_38", feature = "dox"))]
+    pub use super::BytesIconExt;
+    pub use super::CharsetConverterExt;
+    pub use super::ConverterExt;
+    pub use super::ConverterInputStreamExt;
+    pub use super::ConverterOutputStreamExt;
+    pub use super::CredentialsExt;
     pub use super::DataInputStreamExt;
     pub use super::DataOutputStreamExt;
+    #[cfg(any(not(windows), feature = "dox"))]
+    pub use super::DesktopAppInfoExt;
+    pub use super::DriveExt;
+    pub use super::EmblemExt;
+    pub use super::EmblemedIconExt;
     pub use super::FileExt;
     pub use super::FileIOStreamExt;
+    pub use super::FileIconExt;
     pub use super::FileInfoExt;
     pub use super::FileInputStreamExt;
+    pub use super::FileMonitorExt;
     pub use super::FileOutputStreamExt;
+    pub use super::FilenameCompleterExt;
     pub use super::FilterInputStreamExt;
     pub use super::FilterOutputStreamExt;
     pub use super::IOStreamExt;
     pub use super::IconExt;
     pub use super::InetAddressExt;
+    pub use super::InetAddressMaskExt;
     pub use super::InetSocketAddressExt;
     pub use super::InputStreamExt;
+    #[cfg(any(feature = "v2_44", feature = "dox"))]
+    pub use super::ListModelExt;
+    #[cfg(any(feature = "v2_44", feature = "dox"))]
+    pub use super::ListStoreExt;
+    pub use super::LoadableIconExt;
     pub use super::MemoryInputStreamExt;
     pub use super::MemoryOutputStreamExt;
     pub use super::MenuExt;
@@ -453,16 +658,24 @@ pub mod traits {
     pub use super::MenuItemExt;
     pub use super::MenuLinkIterExt;
     pub use super::MenuModelExt;
+    pub use super::MountExt;
     pub use super::MountOperationExt;
     pub use super::NetworkAddressExt;
+    pub use super::NetworkMonitorExt;
     pub use super::NetworkServiceExt;
     #[cfg(any(feature = "v2_40", feature = "dox"))]
     pub use super::NotificationExt;
     pub use super::OutputStreamExt;
     pub use super::PermissionExt;
+    pub use super::PollableInputStreamExt;
+    pub use super::PollableOutputStreamExt;
+    pub use super::ProxyExt;
+    pub use super::ProxyAddressExt;
+    pub use super::ProxyResolverExt;
     pub use super::ResolverExt;
     pub use super::SeekableExt;
     pub use super::SettingsExt;
+    pub use super::SettingsBackendExt;
     pub use super::SimpleActionExt;
     pub use super::SimpleActionGroupExt;
     pub use super::SocketExt;
@@ -473,6 +686,10 @@ pub mod traits {
     pub use super::SocketConnectionExt;
     pub use super::SocketListenerExt;
     pub use super::SocketServiceExt;
+    #[cfg(any(feature = "v2_40", feature = "dox"))]
+    pub use super::SubprocessExt;
+    #[cfg(any(feature = "v2_40", feature = "dox"))]
+    pub use super::SubprocessLauncherExt;
     pub use super::TcpConnectionExt;
     pub use super::ThemedIconExt;
     pub use super::ThreadedSocketServiceExt;
@@ -484,4 +701,11 @@ pub mod traits {
     pub use super::TlsInteractionExt;
     pub use super::TlsPasswordExt;
     pub use super::TlsServerConnectionExt;
+    #[cfg(any(unix, feature = "dox"))]
+    pub use super::UnixSocketAddressExt;
+    pub use super::VfsExt;
+    pub use super::VolumeExt;
+    pub use super::VolumeMonitorExt;
+    pub use super::ZlibCompressorExt;
+    pub use super::ZlibDecompressorExt;
 }

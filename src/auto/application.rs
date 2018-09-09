@@ -4,6 +4,7 @@
 
 use ActionGroup;
 use ActionMap;
+use ApplicationCommandLine;
 use ApplicationFlags;
 use Cancellable;
 use Error;
@@ -21,6 +22,7 @@ use glib::signal::connect;
 use glib::translate::*;
 use glib_ffi;
 use gobject_ffi;
+use libc;
 use std::boxed::Box as Box_;
 use std::mem;
 use std::mem::transmute;
@@ -120,6 +122,15 @@ pub trait ApplicationExt {
 
     fn set_inactivity_timeout(&self, inactivity_timeout: u32);
 
+    #[cfg(any(feature = "v2_56", feature = "dox"))]
+    fn set_option_context_description<'a, P: Into<Option<&'a str>>>(&self, description: P);
+
+    #[cfg(any(feature = "v2_56", feature = "dox"))]
+    fn set_option_context_parameter_string<'a, P: Into<Option<&'a str>>>(&self, parameter_string: P);
+
+    #[cfg(any(feature = "v2_56", feature = "dox"))]
+    fn set_option_context_summary<'a, P: Into<Option<&'a str>>>(&self, summary: P);
+
     #[cfg(any(feature = "v2_42", feature = "dox"))]
     fn set_resource_base_path<'a, P: Into<Option<&'a str>>>(&self, resource_path: P);
 
@@ -138,7 +149,7 @@ pub trait ApplicationExt {
 
     fn connect_activate<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
 
-    //fn connect_command_line<Unsupported or ignored types>(&self, f: F) -> SignalHandlerId;
+    fn connect_command_line<F: Fn(&Self, &ApplicationCommandLine) -> i32 + 'static>(&self, f: F) -> SignalHandlerId;
 
     //#[cfg(any(feature = "v2_40", feature = "dox"))]
     //fn connect_handle_local_options<Unsupported or ignored types>(&self, f: F) -> SignalHandlerId;
@@ -335,6 +346,33 @@ impl<O: IsA<Application> + IsA<glib::object::Object>> ApplicationExt for O {
         }
     }
 
+    #[cfg(any(feature = "v2_56", feature = "dox"))]
+    fn set_option_context_description<'a, P: Into<Option<&'a str>>>(&self, description: P) {
+        let description = description.into();
+        let description = description.to_glib_none();
+        unsafe {
+            ffi::g_application_set_option_context_description(self.to_glib_none().0, description.0);
+        }
+    }
+
+    #[cfg(any(feature = "v2_56", feature = "dox"))]
+    fn set_option_context_parameter_string<'a, P: Into<Option<&'a str>>>(&self, parameter_string: P) {
+        let parameter_string = parameter_string.into();
+        let parameter_string = parameter_string.to_glib_none();
+        unsafe {
+            ffi::g_application_set_option_context_parameter_string(self.to_glib_none().0, parameter_string.0);
+        }
+    }
+
+    #[cfg(any(feature = "v2_56", feature = "dox"))]
+    fn set_option_context_summary<'a, P: Into<Option<&'a str>>>(&self, summary: P) {
+        let summary = summary.into();
+        let summary = summary.to_glib_none();
+        unsafe {
+            ffi::g_application_set_option_context_summary(self.to_glib_none().0, summary.0);
+        }
+    }
+
     #[cfg(any(feature = "v2_42", feature = "dox"))]
     fn set_resource_base_path<'a, P: Into<Option<&'a str>>>(&self, resource_path: P) {
         let resource_path = resource_path.into();
@@ -387,9 +425,13 @@ impl<O: IsA<Application> + IsA<glib::object::Object>> ApplicationExt for O {
         }
     }
 
-    //fn connect_command_line<Unsupported or ignored types>(&self, f: F) -> SignalHandlerId {
-    //    Ignored command_line: Gio.ApplicationCommandLine
-    //}
+    fn connect_command_line<F: Fn(&Self, &ApplicationCommandLine) -> i32 + 'static>(&self, f: F) -> SignalHandlerId {
+        unsafe {
+            let f: Box_<Box_<Fn(&Self, &ApplicationCommandLine) -> i32 + 'static>> = Box_::new(Box_::new(f));
+            connect(self.to_glib_none().0, "command-line",
+                transmute(command_line_trampoline::<Self> as usize), Box_::into_raw(f) as *mut _)
+        }
+    }
 
     //#[cfg(any(feature = "v2_40", feature = "dox"))]
     //fn connect_handle_local_options<Unsupported or ignored types>(&self, f: F) -> SignalHandlerId {
@@ -480,49 +522,48 @@ impl<O: IsA<Application> + IsA<glib::object::Object>> ApplicationExt for O {
 
 unsafe extern "C" fn activate_trampoline<P>(this: *mut ffi::GApplication, f: glib_ffi::gpointer)
 where P: IsA<Application> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&Application::from_glib_borrow(this).downcast_unchecked())
 }
 
+unsafe extern "C" fn command_line_trampoline<P>(this: *mut ffi::GApplication, command_line: *mut ffi::GApplicationCommandLine, f: glib_ffi::gpointer) -> libc::c_int
+where P: IsA<Application> {
+    let f: &&(Fn(&P, &ApplicationCommandLine) -> i32 + 'static) = transmute(f);
+    f(&Application::from_glib_borrow(this).downcast_unchecked(), &from_glib_borrow(command_line))
+}
+
 unsafe extern "C" fn shutdown_trampoline<P>(this: *mut ffi::GApplication, f: glib_ffi::gpointer)
 where P: IsA<Application> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&Application::from_glib_borrow(this).downcast_unchecked())
 }
 
 unsafe extern "C" fn startup_trampoline<P>(this: *mut ffi::GApplication, f: glib_ffi::gpointer)
 where P: IsA<Application> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&Application::from_glib_borrow(this).downcast_unchecked())
 }
 
 unsafe extern "C" fn notify_action_group_trampoline<P>(this: *mut ffi::GApplication, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<Application> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&Application::from_glib_borrow(this).downcast_unchecked())
 }
 
 unsafe extern "C" fn notify_application_id_trampoline<P>(this: *mut ffi::GApplication, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<Application> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&Application::from_glib_borrow(this).downcast_unchecked())
 }
 
 unsafe extern "C" fn notify_flags_trampoline<P>(this: *mut ffi::GApplication, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<Application> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&Application::from_glib_borrow(this).downcast_unchecked())
 }
 
 unsafe extern "C" fn notify_inactivity_timeout_trampoline<P>(this: *mut ffi::GApplication, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<Application> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&Application::from_glib_borrow(this).downcast_unchecked())
 }
@@ -530,28 +571,24 @@ where P: IsA<Application> {
 #[cfg(any(feature = "v2_44", feature = "dox"))]
 unsafe extern "C" fn notify_is_busy_trampoline<P>(this: *mut ffi::GApplication, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<Application> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&Application::from_glib_borrow(this).downcast_unchecked())
 }
 
 unsafe extern "C" fn notify_is_registered_trampoline<P>(this: *mut ffi::GApplication, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<Application> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&Application::from_glib_borrow(this).downcast_unchecked())
 }
 
 unsafe extern "C" fn notify_is_remote_trampoline<P>(this: *mut ffi::GApplication, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<Application> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&Application::from_glib_borrow(this).downcast_unchecked())
 }
 
 unsafe extern "C" fn notify_resource_base_path_trampoline<P>(this: *mut ffi::GApplication, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<Application> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&Application::from_glib_borrow(this).downcast_unchecked())
 }
