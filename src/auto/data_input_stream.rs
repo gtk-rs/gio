@@ -11,6 +11,8 @@ use FilterInputStream;
 use InputStream;
 use Seekable;
 use ffi;
+#[cfg(feature = "futures")]
+use futures_core;
 use glib;
 use glib::object::Downcast;
 use glib::object::IsA;
@@ -40,7 +42,7 @@ impl DataInputStream {
     }
 }
 
-pub trait DataInputStreamExt {
+pub trait DataInputStreamExt: Sized {
     fn get_byte_order(&self) -> DataStreamByteOrder;
 
     fn get_newline_type(&self) -> DataStreamNewlineType;
@@ -63,13 +65,22 @@ pub trait DataInputStreamExt {
 
     fn read_uint64<'a, P: Into<Option<&'a Cancellable>>>(&self, cancellable: P) -> Result<u64, Error>;
 
+    #[cfg_attr(feature = "v2_56", deprecated)]
     fn read_until<'a, P: Into<Option<&'a Cancellable>>>(&self, stop_chars: &str, cancellable: P) -> Result<(String, usize), Error>;
 
+    #[cfg_attr(feature = "v2_56", deprecated)]
     fn read_until_async<'a, P: Into<Option<&'a Cancellable>>, Q: FnOnce(Result<(String, usize), Error>) + Send + 'static>(&self, stop_chars: &str, io_priority: glib::Priority, cancellable: P, callback: Q);
+
+    #[cfg_attr(feature = "v2_56", deprecated)]
+    #[cfg(feature = "futures")]
+    fn read_until_async_future(&self, stop_chars: &str, io_priority: glib::Priority) -> Box_<futures_core::Future<Item = (Self, (String, usize)), Error = (Self, Error)>>;
 
     fn read_upto<'a, P: Into<Option<&'a Cancellable>>>(&self, stop_chars: &str, cancellable: P) -> Result<(String, usize), Error>;
 
     fn read_upto_async<'a, P: Into<Option<&'a Cancellable>>, Q: FnOnce(Result<(String, usize), Error>) + Send + 'static>(&self, stop_chars: &str, io_priority: glib::Priority, cancellable: P, callback: Q);
+
+    #[cfg(feature = "futures")]
+    fn read_upto_async_future(&self, stop_chars: &str, io_priority: glib::Priority) -> Box_<futures_core::Future<Item = (Self, (String, usize)), Error = (Self, Error)>>;
 
     fn set_byte_order(&self, order: DataStreamByteOrder);
 
@@ -80,7 +91,7 @@ pub trait DataInputStreamExt {
     fn connect_property_newline_type_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
 }
 
-impl<O: IsA<DataInputStream> + IsA<glib::object::Object>> DataInputStreamExt for O {
+impl<O: IsA<DataInputStream> + IsA<glib::object::Object> + Clone + 'static> DataInputStreamExt for O {
     fn get_byte_order(&self) -> DataStreamByteOrder {
         unsafe {
             from_glib(ffi::g_data_input_stream_get_byte_order(self.to_glib_none().0))
@@ -195,7 +206,6 @@ impl<O: IsA<DataInputStream> + IsA<glib::object::Object>> DataInputStreamExt for
         let user_data: Box<Box<Q>> = Box::new(Box::new(callback));
         unsafe extern "C" fn read_until_async_trampoline<Q: FnOnce(Result<(String, usize), Error>) + Send + 'static>(_source_object: *mut gobject_ffi::GObject, res: *mut ffi::GAsyncResult, user_data: glib_ffi::gpointer)
         {
-            callback_guard!();
             let mut error = ptr::null_mut();
             let mut length = mem::uninitialized();
             let ret = ffi::g_data_input_stream_read_until_finish(_source_object as *mut _, res, &mut length, &mut error);
@@ -207,6 +217,31 @@ impl<O: IsA<DataInputStream> + IsA<glib::object::Object>> DataInputStreamExt for
         unsafe {
             ffi::g_data_input_stream_read_until_async(self.to_glib_none().0, stop_chars.to_glib_none().0, io_priority.to_glib(), cancellable.0, Some(callback), Box::into_raw(user_data) as *mut _);
         }
+    }
+
+    #[cfg(feature = "futures")]
+    fn read_until_async_future(&self, stop_chars: &str, io_priority: glib::Priority) -> Box_<futures_core::Future<Item = (Self, (String, usize)), Error = (Self, Error)>> {
+        use GioFuture;
+        use fragile::Fragile;
+
+        let stop_chars = String::from(stop_chars);
+        GioFuture::new(self, move |obj, send| {
+            let cancellable = Cancellable::new();
+            let send = Fragile::new(send);
+            let obj_clone = Fragile::new(obj.clone());
+            obj.read_until_async(
+                 &stop_chars,
+                 io_priority,
+                 Some(&cancellable),
+                 move |res| {
+                     let obj = obj_clone.into_inner();
+                     let res = res.map(|v| (obj.clone(), v)).map_err(|v| (obj.clone(), v));
+                     let _ = send.into_inner().send(res);
+                 },
+            );
+
+            cancellable
+        })
     }
 
     fn read_upto<'a, P: Into<Option<&'a Cancellable>>>(&self, stop_chars: &str, cancellable: P) -> Result<(String, usize), Error> {
@@ -228,7 +263,6 @@ impl<O: IsA<DataInputStream> + IsA<glib::object::Object>> DataInputStreamExt for
         let user_data: Box<Box<Q>> = Box::new(Box::new(callback));
         unsafe extern "C" fn read_upto_async_trampoline<Q: FnOnce(Result<(String, usize), Error>) + Send + 'static>(_source_object: *mut gobject_ffi::GObject, res: *mut ffi::GAsyncResult, user_data: glib_ffi::gpointer)
         {
-            callback_guard!();
             let mut error = ptr::null_mut();
             let mut length = mem::uninitialized();
             let ret = ffi::g_data_input_stream_read_upto_finish(_source_object as *mut _, res, &mut length, &mut error);
@@ -240,6 +274,31 @@ impl<O: IsA<DataInputStream> + IsA<glib::object::Object>> DataInputStreamExt for
         unsafe {
             ffi::g_data_input_stream_read_upto_async(self.to_glib_none().0, stop_chars.to_glib_none().0, stop_chars_len, io_priority.to_glib(), cancellable.0, Some(callback), Box::into_raw(user_data) as *mut _);
         }
+    }
+
+    #[cfg(feature = "futures")]
+    fn read_upto_async_future(&self, stop_chars: &str, io_priority: glib::Priority) -> Box_<futures_core::Future<Item = (Self, (String, usize)), Error = (Self, Error)>> {
+        use GioFuture;
+        use fragile::Fragile;
+
+        let stop_chars = String::from(stop_chars);
+        GioFuture::new(self, move |obj, send| {
+            let cancellable = Cancellable::new();
+            let send = Fragile::new(send);
+            let obj_clone = Fragile::new(obj.clone());
+            obj.read_upto_async(
+                 &stop_chars,
+                 io_priority,
+                 Some(&cancellable),
+                 move |res| {
+                     let obj = obj_clone.into_inner();
+                     let res = res.map(|v| (obj.clone(), v)).map_err(|v| (obj.clone(), v));
+                     let _ = send.into_inner().send(res);
+                 },
+            );
+
+            cancellable
+        })
     }
 
     fn set_byte_order(&self, order: DataStreamByteOrder) {
@@ -273,14 +332,12 @@ impl<O: IsA<DataInputStream> + IsA<glib::object::Object>> DataInputStreamExt for
 
 unsafe extern "C" fn notify_byte_order_trampoline<P>(this: *mut ffi::GDataInputStream, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<DataInputStream> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&DataInputStream::from_glib_borrow(this).downcast_unchecked())
 }
 
 unsafe extern "C" fn notify_newline_type_trampoline<P>(this: *mut ffi::GDataInputStream, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<DataInputStream> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&DataInputStream::from_glib_borrow(this).downcast_unchecked())
 }

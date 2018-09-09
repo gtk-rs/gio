@@ -3,6 +3,7 @@
 // DO NOT EDIT
 
 use OutputStream;
+use PollableOutputStream;
 use Seekable;
 use ffi;
 use glib;
@@ -19,7 +20,7 @@ use std::mem::transmute;
 use std::ptr;
 
 glib_wrapper! {
-    pub struct MemoryOutputStream(Object<ffi::GMemoryOutputStream, ffi::GMemoryOutputStreamClass>): OutputStream, Seekable;
+    pub struct MemoryOutputStream(Object<ffi::GMemoryOutputStream, ffi::GMemoryOutputStreamClass>): OutputStream, PollableOutputStream, Seekable;
 
     match fn {
         get_type => || ffi::g_memory_output_stream_get_type(),
@@ -69,7 +70,6 @@ impl<O: IsA<MemoryOutputStream> + IsA<glib::object::Object>> MemoryOutputStreamE
 
 unsafe extern "C" fn notify_data_size_trampoline<P>(this: *mut ffi::GMemoryOutputStream, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<MemoryOutputStream> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&MemoryOutputStream::from_glib_borrow(this).downcast_unchecked())
 }

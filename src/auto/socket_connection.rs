@@ -10,6 +10,8 @@ use SocketAddress;
 use SocketFamily;
 use SocketType;
 use ffi;
+#[cfg(feature = "futures")]
+use futures_core;
 use glib;
 use glib::object::Downcast;
 use glib::object::IsA;
@@ -45,10 +47,13 @@ impl SocketConnection {
     }
 }
 
-pub trait SocketConnectionExt {
+pub trait SocketConnectionExt: Sized {
     fn connect<'a, P: IsA<SocketAddress>, Q: Into<Option<&'a Cancellable>>>(&self, address: &P, cancellable: Q) -> Result<(), Error>;
 
     fn connect_async<'a, P: IsA<SocketAddress>, Q: Into<Option<&'a Cancellable>>, R: FnOnce(Result<(), Error>) + Send + 'static>(&self, address: &P, cancellable: Q, callback: R);
+
+    #[cfg(feature = "futures")]
+    fn connect_async_future<P: IsA<SocketAddress> + Clone + 'static>(&self, address: &P) -> Box_<futures_core::Future<Item = (Self, ()), Error = (Self, Error)>>;
 
     fn get_local_address(&self) -> Result<SocketAddress, Error>;
 
@@ -61,7 +66,7 @@ pub trait SocketConnectionExt {
     fn connect_property_socket_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
 }
 
-impl<O: IsA<SocketConnection> + IsA<glib::object::Object>> SocketConnectionExt for O {
+impl<O: IsA<SocketConnection> + IsA<glib::object::Object> + Clone + 'static> SocketConnectionExt for O {
     fn connect<'a, P: IsA<SocketAddress>, Q: Into<Option<&'a Cancellable>>>(&self, address: &P, cancellable: Q) -> Result<(), Error> {
         let cancellable = cancellable.into();
         let cancellable = cancellable.to_glib_none();
@@ -78,7 +83,6 @@ impl<O: IsA<SocketConnection> + IsA<glib::object::Object>> SocketConnectionExt f
         let user_data: Box<Box<R>> = Box::new(Box::new(callback));
         unsafe extern "C" fn connect_async_trampoline<R: FnOnce(Result<(), Error>) + Send + 'static>(_source_object: *mut gobject_ffi::GObject, res: *mut ffi::GAsyncResult, user_data: glib_ffi::gpointer)
         {
-            callback_guard!();
             let mut error = ptr::null_mut();
             let _ = ffi::g_socket_connection_connect_finish(_source_object as *mut _, res, &mut error);
             let result = if error.is_null() { Ok(()) } else { Err(from_glib_full(error)) };
@@ -89,6 +93,30 @@ impl<O: IsA<SocketConnection> + IsA<glib::object::Object>> SocketConnectionExt f
         unsafe {
             ffi::g_socket_connection_connect_async(self.to_glib_none().0, address.to_glib_none().0, cancellable.0, Some(callback), Box::into_raw(user_data) as *mut _);
         }
+    }
+
+    #[cfg(feature = "futures")]
+    fn connect_async_future<P: IsA<SocketAddress> + Clone + 'static>(&self, address: &P) -> Box_<futures_core::Future<Item = (Self, ()), Error = (Self, Error)>> {
+        use GioFuture;
+        use fragile::Fragile;
+
+        let address = address.clone();
+        GioFuture::new(self, move |obj, send| {
+            let cancellable = Cancellable::new();
+            let send = Fragile::new(send);
+            let obj_clone = Fragile::new(obj.clone());
+            obj.connect_async(
+                 &address,
+                 Some(&cancellable),
+                 move |res| {
+                     let obj = obj_clone.into_inner();
+                     let res = res.map(|v| (obj.clone(), v)).map_err(|v| (obj.clone(), v));
+                     let _ = send.into_inner().send(res);
+                 },
+            );
+
+            cancellable
+        })
     }
 
     fn get_local_address(&self) -> Result<SocketAddress, Error> {
@@ -130,7 +158,6 @@ impl<O: IsA<SocketConnection> + IsA<glib::object::Object>> SocketConnectionExt f
 
 unsafe extern "C" fn notify_socket_trampoline<P>(this: *mut ffi::GSocketConnection, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<SocketConnection> {
-    callback_guard!();
     let f: &&(Fn(&P) + 'static) = transmute(f);
     f(&SocketConnection::from_glib_borrow(this).downcast_unchecked())
 }
