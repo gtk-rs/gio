@@ -6,20 +6,19 @@ use InputStream;
 use ffi;
 use glib::object::IsA;
 use glib::translate::*;
-use glib_ffi;
-use gobject_ffi;
-use std::mem;
-use std::ptr;
+use std::fmt;
 
 glib_wrapper! {
-    pub struct PollableInputStream(Object<ffi::GPollableInputStream, ffi::GPollableInputStreamInterface>): InputStream;
+    pub struct PollableInputStream(Interface<ffi::GPollableInputStream>) @requires InputStream;
 
     match fn {
         get_type => || ffi::g_pollable_input_stream_get_type(),
     }
 }
 
-pub trait PollableInputStreamExt {
+pub const NONE_POLLABLE_INPUT_STREAM: Option<&PollableInputStream> = None;
+
+pub trait PollableInputStreamExt: 'static {
     fn can_poll(&self) -> bool;
 
     fn is_readable(&self) -> bool;
@@ -28,13 +27,19 @@ pub trait PollableInputStreamExt {
 impl<O: IsA<PollableInputStream>> PollableInputStreamExt for O {
     fn can_poll(&self) -> bool {
         unsafe {
-            from_glib(ffi::g_pollable_input_stream_can_poll(self.to_glib_none().0))
+            from_glib(ffi::g_pollable_input_stream_can_poll(self.as_ref().to_glib_none().0))
         }
     }
 
     fn is_readable(&self) -> bool {
         unsafe {
-            from_glib(ffi::g_pollable_input_stream_is_readable(self.to_glib_none().0))
+            from_glib(ffi::g_pollable_input_stream_is_readable(self.as_ref().to_glib_none().0))
         }
+    }
+}
+
+impl fmt::Display for PollableInputStream {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "PollableInputStream")
     }
 }

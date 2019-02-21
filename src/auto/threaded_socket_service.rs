@@ -9,20 +9,19 @@ use ffi;
 use glib;
 use glib::StaticType;
 use glib::Value;
-use glib::object::Downcast;
+use glib::object::Cast;
 use glib::object::IsA;
 use glib::signal::SignalHandlerId;
-use glib::signal::connect;
+use glib::signal::connect_raw;
 use glib::translate::*;
 use glib_ffi;
 use gobject_ffi;
 use std::boxed::Box as Box_;
-use std::mem;
+use std::fmt;
 use std::mem::transmute;
-use std::ptr;
 
 glib_wrapper! {
-    pub struct ThreadedSocketService(Object<ffi::GThreadedSocketService, ffi::GThreadedSocketServiceClass>): SocketService, SocketListener;
+    pub struct ThreadedSocketService(Object<ffi::GThreadedSocketService, ffi::GThreadedSocketServiceClass, ThreadedSocketServiceClass>) @extends SocketService, SocketListener;
 
     match fn {
         get_type => || ffi::g_threaded_socket_service_get_type(),
@@ -32,53 +31,45 @@ glib_wrapper! {
 impl ThreadedSocketService {
     pub fn new(max_threads: i32) -> ThreadedSocketService {
         unsafe {
-            SocketService::from_glib_full(ffi::g_threaded_socket_service_new(max_threads)).downcast_unchecked()
+            SocketService::from_glib_full(ffi::g_threaded_socket_service_new(max_threads)).unsafe_cast()
         }
     }
 }
 
-pub trait ThreadedSocketServiceExt {
+pub const NONE_THREADED_SOCKET_SERVICE: Option<&ThreadedSocketService> = None;
+
+pub trait ThreadedSocketServiceExt: 'static {
     fn get_property_max_threads(&self) -> i32;
 
     fn connect_run<F: Fn(&Self, &SocketConnection, &glib::Object) -> bool + 'static>(&self, f: F) -> SignalHandlerId;
-
-    fn connect_property_max_threads_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
 }
 
-impl<O: IsA<ThreadedSocketService> + IsA<glib::object::Object>> ThreadedSocketServiceExt for O {
+impl<O: IsA<ThreadedSocketService>> ThreadedSocketServiceExt for O {
     fn get_property_max_threads(&self) -> i32 {
         unsafe {
             let mut value = Value::from_type(<i32 as StaticType>::static_type());
-            gobject_ffi::g_object_get_property(self.to_glib_none().0, "max-threads".to_glib_none().0, value.to_glib_none_mut().0);
+            gobject_ffi::g_object_get_property(self.to_glib_none().0 as *mut gobject_ffi::GObject, b"max-threads\0".as_ptr() as *const _, value.to_glib_none_mut().0);
             value.get().unwrap()
         }
     }
 
     fn connect_run<F: Fn(&Self, &SocketConnection, &glib::Object) -> bool + 'static>(&self, f: F) -> SignalHandlerId {
         unsafe {
-            let f: Box_<Box_<Fn(&Self, &SocketConnection, &glib::Object) -> bool + 'static>> = Box_::new(Box_::new(f));
-            connect(self.to_glib_none().0, "run",
-                transmute(run_trampoline::<Self> as usize), Box_::into_raw(f) as *mut _)
-        }
-    }
-
-    fn connect_property_max_threads_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId {
-        unsafe {
-            let f: Box_<Box_<Fn(&Self) + 'static>> = Box_::new(Box_::new(f));
-            connect(self.to_glib_none().0, "notify::max-threads",
-                transmute(notify_max_threads_trampoline::<Self> as usize), Box_::into_raw(f) as *mut _)
+            let f: Box_<F> = Box_::new(f);
+            connect_raw(self.as_ptr() as *mut _, b"run\0".as_ptr() as *const _,
+                Some(transmute(run_trampoline::<Self, F> as usize)), Box_::into_raw(f))
         }
     }
 }
 
-unsafe extern "C" fn run_trampoline<P>(this: *mut ffi::GThreadedSocketService, connection: *mut ffi::GSocketConnection, source_object: *mut gobject_ffi::GObject, f: glib_ffi::gpointer) -> glib_ffi::gboolean
+unsafe extern "C" fn run_trampoline<P, F: Fn(&P, &SocketConnection, &glib::Object) -> bool + 'static>(this: *mut ffi::GThreadedSocketService, connection: *mut ffi::GSocketConnection, source_object: *mut gobject_ffi::GObject, f: glib_ffi::gpointer) -> glib_ffi::gboolean
 where P: IsA<ThreadedSocketService> {
-    let f: &&(Fn(&P, &SocketConnection, &glib::Object) -> bool + 'static) = transmute(f);
-    f(&ThreadedSocketService::from_glib_borrow(this).downcast_unchecked(), &from_glib_borrow(connection), &from_glib_borrow(source_object)).to_glib()
+    let f: &F = transmute(f);
+    f(&ThreadedSocketService::from_glib_borrow(this).unsafe_cast(), &from_glib_borrow(connection), &from_glib_borrow(source_object)).to_glib()
 }
 
-unsafe extern "C" fn notify_max_threads_trampoline<P>(this: *mut ffi::GThreadedSocketService, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
-where P: IsA<ThreadedSocketService> {
-    let f: &&(Fn(&P) + 'static) = transmute(f);
-    f(&ThreadedSocketService::from_glib_borrow(this).downcast_unchecked())
+impl fmt::Display for ThreadedSocketService {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ThreadedSocketService")
+    }
 }

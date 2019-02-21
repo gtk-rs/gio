@@ -3,21 +3,17 @@
 // DO NOT EDIT
 
 use ffi;
-use glib;
-use glib::object::Downcast;
-use glib::object::IsA;
+use glib::object::ObjectType;
 use glib::signal::SignalHandlerId;
-use glib::signal::connect;
+use glib::signal::connect_raw;
 use glib::translate::*;
 use glib_ffi;
-use gobject_ffi;
 use std::boxed::Box as Box_;
-use std::mem;
+use std::fmt;
 use std::mem::transmute;
-use std::ptr;
 
 glib_wrapper! {
-    pub struct AppInfoMonitor(Object<ffi::GAppInfoMonitor>);
+    pub struct AppInfoMonitor(Object<ffi::GAppInfoMonitor, AppInfoMonitorClass>);
 
     match fn {
         get_type => || ffi::g_app_info_monitor_get_type(),
@@ -25,30 +21,28 @@ glib_wrapper! {
 }
 
 impl AppInfoMonitor {
-    #[cfg(any(feature = "v2_40", feature = "dox"))]
     pub fn get() -> AppInfoMonitor {
         unsafe {
             from_glib_full(ffi::g_app_info_monitor_get())
         }
     }
-}
 
-pub trait AppInfoMonitorExt {
-    fn connect_changed<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
-}
-
-impl<O: IsA<AppInfoMonitor> + IsA<glib::object::Object>> AppInfoMonitorExt for O {
-    fn connect_changed<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId {
+    pub fn connect_changed<F: Fn(&AppInfoMonitor) + 'static>(&self, f: F) -> SignalHandlerId {
         unsafe {
-            let f: Box_<Box_<Fn(&Self) + 'static>> = Box_::new(Box_::new(f));
-            connect(self.to_glib_none().0, "changed",
-                transmute(changed_trampoline::<Self> as usize), Box_::into_raw(f) as *mut _)
+            let f: Box_<F> = Box_::new(f);
+            connect_raw(self.as_ptr() as *mut _, b"changed\0".as_ptr() as *const _,
+                Some(transmute(changed_trampoline::<F> as usize)), Box_::into_raw(f))
         }
     }
 }
 
-unsafe extern "C" fn changed_trampoline<P>(this: *mut ffi::GAppInfoMonitor, f: glib_ffi::gpointer)
-where P: IsA<AppInfoMonitor> {
-    let f: &&(Fn(&P) + 'static) = transmute(f);
-    f(&AppInfoMonitor::from_glib_borrow(this).downcast_unchecked())
+unsafe extern "C" fn changed_trampoline<F: Fn(&AppInfoMonitor) + 'static>(this: *mut ffi::GAppInfoMonitor, f: glib_ffi::gpointer) {
+    let f: &F = transmute(f);
+    f(&from_glib_borrow(this))
+}
+
+impl fmt::Display for AppInfoMonitor {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "AppInfoMonitor")
+    }
 }

@@ -4,47 +4,54 @@
 
 use SocketAddressEnumerator;
 use ffi;
+#[cfg(any(feature = "v2_48", feature = "dox"))]
+use glib::GString;
 use glib::object::IsA;
 use glib::translate::*;
-use glib_ffi;
-use gobject_ffi;
-use std::mem;
-use std::ptr;
+use std::fmt;
 
 glib_wrapper! {
-    pub struct SocketConnectable(Object<ffi::GSocketConnectable, ffi::GSocketConnectableIface>);
+    pub struct SocketConnectable(Interface<ffi::GSocketConnectable>);
 
     match fn {
         get_type => || ffi::g_socket_connectable_get_type(),
     }
 }
 
-pub trait SocketConnectableExt {
+pub const NONE_SOCKET_CONNECTABLE: Option<&SocketConnectable> = None;
+
+pub trait SocketConnectableExt: 'static {
     fn enumerate(&self) -> Option<SocketAddressEnumerator>;
 
     fn proxy_enumerate(&self) -> Option<SocketAddressEnumerator>;
 
     #[cfg(any(feature = "v2_48", feature = "dox"))]
-    fn to_string(&self) -> Option<String>;
+    fn to_string(&self) -> Option<GString>;
 }
 
 impl<O: IsA<SocketConnectable>> SocketConnectableExt for O {
     fn enumerate(&self) -> Option<SocketAddressEnumerator> {
         unsafe {
-            from_glib_full(ffi::g_socket_connectable_enumerate(self.to_glib_none().0))
+            from_glib_full(ffi::g_socket_connectable_enumerate(self.as_ref().to_glib_none().0))
         }
     }
 
     fn proxy_enumerate(&self) -> Option<SocketAddressEnumerator> {
         unsafe {
-            from_glib_full(ffi::g_socket_connectable_proxy_enumerate(self.to_glib_none().0))
+            from_glib_full(ffi::g_socket_connectable_proxy_enumerate(self.as_ref().to_glib_none().0))
         }
     }
 
     #[cfg(any(feature = "v2_48", feature = "dox"))]
-    fn to_string(&self) -> Option<String> {
+    fn to_string(&self) -> Option<GString> {
         unsafe {
-            from_glib_full(ffi::g_socket_connectable_to_string(self.to_glib_none().0))
+            from_glib_full(ffi::g_socket_connectable_to_string(self.as_ref().to_glib_none().0))
         }
+    }
+}
+
+impl fmt::Display for SocketConnectable {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "SocketConnectable")
     }
 }

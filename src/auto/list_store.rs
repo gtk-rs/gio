@@ -4,26 +4,14 @@
 
 use ListModel;
 use ffi;
+#[cfg(any(feature = "v2_44", feature = "dox"))]
 use glib;
-#[cfg(any(feature = "v2_44", feature = "dox"))]
-use glib::object::Downcast;
 use glib::object::IsA;
-#[cfg(any(feature = "v2_44", feature = "dox"))]
-use glib::signal::SignalHandlerId;
-#[cfg(any(feature = "v2_44", feature = "dox"))]
-use glib::signal::connect;
 use glib::translate::*;
-use glib_ffi;
-use gobject_ffi;
-#[cfg(any(feature = "v2_44", feature = "dox"))]
-use std::boxed::Box as Box_;
-use std::mem;
-#[cfg(any(feature = "v2_44", feature = "dox"))]
-use std::mem::transmute;
-use std::ptr;
+use std::fmt;
 
 glib_wrapper! {
-    pub struct ListStore(Object<ffi::GListStore, ffi::GListStoreClass>): ListModel;
+    pub struct ListStore(Object<ffi::GListStore, ffi::GListStoreClass, ListStoreClass>) @implements ListModel;
 
     match fn {
         get_type => || ffi::g_list_store_get_type(),
@@ -39,7 +27,9 @@ impl ListStore {
     }
 }
 
-pub trait ListStoreExt {
+pub const NONE_LIST_STORE: Option<&ListStore> = None;
+
+pub trait ListStoreExt: 'static {
     #[cfg(any(feature = "v2_44", feature = "dox"))]
     fn append<P: IsA<glib::Object>>(&self, item: &P);
 
@@ -47,7 +37,7 @@ pub trait ListStoreExt {
     fn insert<P: IsA<glib::Object>>(&self, position: u32, item: &P);
 
     //#[cfg(any(feature = "v2_44", feature = "dox"))]
-    //fn insert_sorted<P: IsA<glib::Object>, Q: Into<Option</*Unimplemented*/Fundamental: Pointer>>>(&self, item: &P, compare_func: /*Unknown conversion*//*Unimplemented*/CompareDataFunc, user_data: Q) -> u32;
+    //fn insert_sorted<P: IsA<glib::Object>>(&self, item: &P, compare_func: /*Unimplemented*/FnMut(/*Unimplemented*/Fundamental: Pointer, /*Unimplemented*/Fundamental: Pointer) -> i32, user_data: /*Unimplemented*/Option<Fundamental: Pointer>) -> u32;
 
     #[cfg(any(feature = "v2_44", feature = "dox"))]
     fn remove(&self, position: u32);
@@ -56,51 +46,48 @@ pub trait ListStoreExt {
     fn remove_all(&self);
 
     //#[cfg(any(feature = "v2_46", feature = "dox"))]
-    //fn sort<P: Into<Option</*Unimplemented*/Fundamental: Pointer>>>(&self, compare_func: /*Unknown conversion*//*Unimplemented*/CompareDataFunc, user_data: P);
+    //fn sort(&self, compare_func: /*Unimplemented*/FnMut(/*Unimplemented*/Fundamental: Pointer, /*Unimplemented*/Fundamental: Pointer) -> i32, user_data: /*Unimplemented*/Option<Fundamental: Pointer>);
 
     #[cfg(any(feature = "v2_44", feature = "dox"))]
     fn splice(&self, position: u32, n_removals: u32, additions: &[glib::Object]);
-
-    #[cfg(any(feature = "v2_44", feature = "dox"))]
-    fn connect_property_item_type_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
 }
 
-impl<O: IsA<ListStore> + IsA<glib::object::Object>> ListStoreExt for O {
+impl<O: IsA<ListStore>> ListStoreExt for O {
     #[cfg(any(feature = "v2_44", feature = "dox"))]
     fn append<P: IsA<glib::Object>>(&self, item: &P) {
         unsafe {
-            ffi::g_list_store_append(self.to_glib_none().0, item.to_glib_none().0);
+            ffi::g_list_store_append(self.as_ref().to_glib_none().0, item.as_ref().to_glib_none().0);
         }
     }
 
     #[cfg(any(feature = "v2_44", feature = "dox"))]
     fn insert<P: IsA<glib::Object>>(&self, position: u32, item: &P) {
         unsafe {
-            ffi::g_list_store_insert(self.to_glib_none().0, position, item.to_glib_none().0);
+            ffi::g_list_store_insert(self.as_ref().to_glib_none().0, position, item.as_ref().to_glib_none().0);
         }
     }
 
     //#[cfg(any(feature = "v2_44", feature = "dox"))]
-    //fn insert_sorted<P: IsA<glib::Object>, Q: Into<Option</*Unimplemented*/Fundamental: Pointer>>>(&self, item: &P, compare_func: /*Unknown conversion*//*Unimplemented*/CompareDataFunc, user_data: Q) -> u32 {
+    //fn insert_sorted<P: IsA<glib::Object>>(&self, item: &P, compare_func: /*Unimplemented*/FnMut(/*Unimplemented*/Fundamental: Pointer, /*Unimplemented*/Fundamental: Pointer) -> i32, user_data: /*Unimplemented*/Option<Fundamental: Pointer>) -> u32 {
     //    unsafe { TODO: call ffi::g_list_store_insert_sorted() }
     //}
 
     #[cfg(any(feature = "v2_44", feature = "dox"))]
     fn remove(&self, position: u32) {
         unsafe {
-            ffi::g_list_store_remove(self.to_glib_none().0, position);
+            ffi::g_list_store_remove(self.as_ref().to_glib_none().0, position);
         }
     }
 
     #[cfg(any(feature = "v2_44", feature = "dox"))]
     fn remove_all(&self) {
         unsafe {
-            ffi::g_list_store_remove_all(self.to_glib_none().0);
+            ffi::g_list_store_remove_all(self.as_ref().to_glib_none().0);
         }
     }
 
     //#[cfg(any(feature = "v2_46", feature = "dox"))]
-    //fn sort<P: Into<Option</*Unimplemented*/Fundamental: Pointer>>>(&self, compare_func: /*Unknown conversion*//*Unimplemented*/CompareDataFunc, user_data: P) {
+    //fn sort(&self, compare_func: /*Unimplemented*/FnMut(/*Unimplemented*/Fundamental: Pointer, /*Unimplemented*/Fundamental: Pointer) -> i32, user_data: /*Unimplemented*/Option<Fundamental: Pointer>) {
     //    unsafe { TODO: call ffi::g_list_store_sort() }
     //}
 
@@ -108,23 +95,13 @@ impl<O: IsA<ListStore> + IsA<glib::object::Object>> ListStoreExt for O {
     fn splice(&self, position: u32, n_removals: u32, additions: &[glib::Object]) {
         let n_additions = additions.len() as u32;
         unsafe {
-            ffi::g_list_store_splice(self.to_glib_none().0, position, n_removals, additions.to_glib_none().0, n_additions);
-        }
-    }
-
-    #[cfg(any(feature = "v2_44", feature = "dox"))]
-    fn connect_property_item_type_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId {
-        unsafe {
-            let f: Box_<Box_<Fn(&Self) + 'static>> = Box_::new(Box_::new(f));
-            connect(self.to_glib_none().0, "notify::item-type",
-                transmute(notify_item_type_trampoline::<Self> as usize), Box_::into_raw(f) as *mut _)
+            ffi::g_list_store_splice(self.as_ref().to_glib_none().0, position, n_removals, additions.to_glib_none().0, n_additions);
         }
     }
 }
 
-#[cfg(any(feature = "v2_44", feature = "dox"))]
-unsafe extern "C" fn notify_item_type_trampoline<P>(this: *mut ffi::GListStore, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
-where P: IsA<ListStore> {
-    let f: &&(Fn(&P) + 'static) = transmute(f);
-    f(&ListStore::from_glib_borrow(this).downcast_unchecked())
+impl fmt::Display for ListStore {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ListStore")
+    }
 }

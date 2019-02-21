@@ -5,23 +5,15 @@
 use Emblem;
 use Icon;
 use ffi;
-use glib;
 use glib::StaticType;
 use glib::Value;
-use glib::object::Downcast;
 use glib::object::IsA;
-use glib::signal::SignalHandlerId;
-use glib::signal::connect;
 use glib::translate::*;
-use glib_ffi;
 use gobject_ffi;
-use std::boxed::Box as Box_;
-use std::mem;
-use std::mem::transmute;
-use std::ptr;
+use std::fmt;
 
 glib_wrapper! {
-    pub struct EmblemedIcon(Object<ffi::GEmblemedIcon, ffi::GEmblemedIconClass>): Icon;
+    pub struct EmblemedIcon(Object<ffi::GEmblemedIcon, ffi::GEmblemedIconClass, EmblemedIconClass>) @implements Icon;
 
     match fn {
         get_type => || ffi::g_emblemed_icon_get_type(),
@@ -29,17 +21,18 @@ glib_wrapper! {
 }
 
 impl EmblemedIcon {
-    pub fn new<'a, P: IsA<Icon>, Q: Into<Option<&'a Emblem>>>(icon: &P, emblem: Q) -> EmblemedIcon {
+    pub fn new<'a, P: IsA<Icon>, Q: IsA<Emblem> + 'a, R: Into<Option<&'a Q>>>(icon: &P, emblem: R) -> EmblemedIcon {
         let emblem = emblem.into();
-        let emblem = emblem.to_glib_none();
         unsafe {
-            from_glib_full(ffi::g_emblemed_icon_new(icon.to_glib_none().0, emblem.0))
+            from_glib_full(ffi::g_emblemed_icon_new(icon.as_ref().to_glib_none().0, emblem.map(|p| p.as_ref()).to_glib_none().0))
         }
     }
 }
 
-pub trait EmblemedIconExt {
-    fn add_emblem(&self, emblem: &Emblem);
+pub const NONE_EMBLEMED_ICON: Option<&EmblemedIcon> = None;
+
+pub trait EmblemedIconExt: 'static {
+    fn add_emblem<P: IsA<Emblem>>(&self, emblem: &P);
 
     fn clear_emblems(&self);
 
@@ -48,54 +41,44 @@ pub trait EmblemedIconExt {
     fn get_icon(&self) -> Option<Icon>;
 
     fn get_property_gicon(&self) -> Option<Icon>;
-
-    fn connect_property_gicon_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
 }
 
-impl<O: IsA<EmblemedIcon> + IsA<glib::object::Object>> EmblemedIconExt for O {
-    fn add_emblem(&self, emblem: &Emblem) {
+impl<O: IsA<EmblemedIcon>> EmblemedIconExt for O {
+    fn add_emblem<P: IsA<Emblem>>(&self, emblem: &P) {
         unsafe {
-            ffi::g_emblemed_icon_add_emblem(self.to_glib_none().0, emblem.to_glib_none().0);
+            ffi::g_emblemed_icon_add_emblem(self.as_ref().to_glib_none().0, emblem.as_ref().to_glib_none().0);
         }
     }
 
     fn clear_emblems(&self) {
         unsafe {
-            ffi::g_emblemed_icon_clear_emblems(self.to_glib_none().0);
+            ffi::g_emblemed_icon_clear_emblems(self.as_ref().to_glib_none().0);
         }
     }
 
     fn get_emblems(&self) -> Vec<Emblem> {
         unsafe {
-            FromGlibPtrContainer::from_glib_none(ffi::g_emblemed_icon_get_emblems(self.to_glib_none().0))
+            FromGlibPtrContainer::from_glib_none(ffi::g_emblemed_icon_get_emblems(self.as_ref().to_glib_none().0))
         }
     }
 
     fn get_icon(&self) -> Option<Icon> {
         unsafe {
-            from_glib_none(ffi::g_emblemed_icon_get_icon(self.to_glib_none().0))
+            from_glib_none(ffi::g_emblemed_icon_get_icon(self.as_ref().to_glib_none().0))
         }
     }
 
     fn get_property_gicon(&self) -> Option<Icon> {
         unsafe {
             let mut value = Value::from_type(<Icon as StaticType>::static_type());
-            gobject_ffi::g_object_get_property(self.to_glib_none().0, "gicon".to_glib_none().0, value.to_glib_none_mut().0);
+            gobject_ffi::g_object_get_property(self.to_glib_none().0 as *mut gobject_ffi::GObject, b"gicon\0".as_ptr() as *const _, value.to_glib_none_mut().0);
             value.get()
-        }
-    }
-
-    fn connect_property_gicon_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId {
-        unsafe {
-            let f: Box_<Box_<Fn(&Self) + 'static>> = Box_::new(Box_::new(f));
-            connect(self.to_glib_none().0, "notify::gicon",
-                transmute(notify_gicon_trampoline::<Self> as usize), Box_::into_raw(f) as *mut _)
         }
     }
 }
 
-unsafe extern "C" fn notify_gicon_trampoline<P>(this: *mut ffi::GEmblemedIcon, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
-where P: IsA<EmblemedIcon> {
-    let f: &&(Fn(&P) + 'static) = transmute(f);
-    f(&EmblemedIcon::from_glib_borrow(this).downcast_unchecked())
+impl fmt::Display for EmblemedIcon {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "EmblemedIcon")
+    }
 }

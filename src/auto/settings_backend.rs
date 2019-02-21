@@ -5,13 +5,10 @@
 use ffi;
 use glib::object::IsA;
 use glib::translate::*;
-use glib_ffi;
-use gobject_ffi;
-use std::mem;
-use std::ptr;
+use std::fmt;
 
 glib_wrapper! {
-    pub struct SettingsBackend(Object<ffi::GSettingsBackend, ffi::GSettingsBackendClass>);
+    pub struct SettingsBackend(Object<ffi::GSettingsBackend, ffi::GSettingsBackendClass, SettingsBackendClass>);
 
     match fn {
         get_type => || ffi::g_settings_backend_get_type(),
@@ -19,7 +16,7 @@ glib_wrapper! {
 }
 
 impl SettingsBackend {
-    //pub fn flatten_tree(tree: /*Ignored*/&glib::Tree) -> (String, Vec<String>, Vec<glib::Variant>) {
+    //pub fn flatten_tree(tree: /*Ignored*/&glib::Tree) -> (GString, Vec<GString>, Vec<glib::Variant>) {
     //    unsafe { TODO: call ffi::g_settings_backend_flatten_tree() }
     //}
 
@@ -30,14 +27,16 @@ impl SettingsBackend {
     }
 }
 
-pub trait SettingsBackendExt {
-    //fn changed<P: Into<Option</*Unimplemented*/Fundamental: Pointer>>>(&self, key: &str, origin_tag: P);
+pub const NONE_SETTINGS_BACKEND: Option<&SettingsBackend> = None;
 
-    //fn changed_tree<P: Into<Option</*Unimplemented*/Fundamental: Pointer>>>(&self, tree: /*Ignored*/&glib::Tree, origin_tag: P);
+pub trait SettingsBackendExt: 'static {
+    //fn changed(&self, key: &str, origin_tag: /*Unimplemented*/Option<Fundamental: Pointer>);
 
-    //fn keys_changed<P: Into<Option</*Unimplemented*/Fundamental: Pointer>>>(&self, path: &str, items: &[&str], origin_tag: P);
+    //fn changed_tree(&self, tree: /*Ignored*/&glib::Tree, origin_tag: /*Unimplemented*/Option<Fundamental: Pointer>);
 
-    //fn path_changed<P: Into<Option</*Unimplemented*/Fundamental: Pointer>>>(&self, path: &str, origin_tag: P);
+    //fn keys_changed(&self, path: &str, items: &[&str], origin_tag: /*Unimplemented*/Option<Fundamental: Pointer>);
+
+    //fn path_changed(&self, path: &str, origin_tag: /*Unimplemented*/Option<Fundamental: Pointer>);
 
     fn path_writable_changed(&self, path: &str);
 
@@ -45,31 +44,37 @@ pub trait SettingsBackendExt {
 }
 
 impl<O: IsA<SettingsBackend>> SettingsBackendExt for O {
-    //fn changed<P: Into<Option</*Unimplemented*/Fundamental: Pointer>>>(&self, key: &str, origin_tag: P) {
+    //fn changed(&self, key: &str, origin_tag: /*Unimplemented*/Option<Fundamental: Pointer>) {
     //    unsafe { TODO: call ffi::g_settings_backend_changed() }
     //}
 
-    //fn changed_tree<P: Into<Option</*Unimplemented*/Fundamental: Pointer>>>(&self, tree: /*Ignored*/&glib::Tree, origin_tag: P) {
+    //fn changed_tree(&self, tree: /*Ignored*/&glib::Tree, origin_tag: /*Unimplemented*/Option<Fundamental: Pointer>) {
     //    unsafe { TODO: call ffi::g_settings_backend_changed_tree() }
     //}
 
-    //fn keys_changed<P: Into<Option</*Unimplemented*/Fundamental: Pointer>>>(&self, path: &str, items: &[&str], origin_tag: P) {
+    //fn keys_changed(&self, path: &str, items: &[&str], origin_tag: /*Unimplemented*/Option<Fundamental: Pointer>) {
     //    unsafe { TODO: call ffi::g_settings_backend_keys_changed() }
     //}
 
-    //fn path_changed<P: Into<Option</*Unimplemented*/Fundamental: Pointer>>>(&self, path: &str, origin_tag: P) {
+    //fn path_changed(&self, path: &str, origin_tag: /*Unimplemented*/Option<Fundamental: Pointer>) {
     //    unsafe { TODO: call ffi::g_settings_backend_path_changed() }
     //}
 
     fn path_writable_changed(&self, path: &str) {
         unsafe {
-            ffi::g_settings_backend_path_writable_changed(self.to_glib_none().0, path.to_glib_none().0);
+            ffi::g_settings_backend_path_writable_changed(self.as_ref().to_glib_none().0, path.to_glib_none().0);
         }
     }
 
     fn writable_changed(&self, key: &str) {
         unsafe {
-            ffi::g_settings_backend_writable_changed(self.to_glib_none().0, key.to_glib_none().0);
+            ffi::g_settings_backend_writable_changed(self.as_ref().to_glib_none().0, key.to_glib_none().0);
         }
+    }
+}
+
+impl fmt::Display for SettingsBackend {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "SettingsBackend")
     }
 }

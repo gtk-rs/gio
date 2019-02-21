@@ -8,6 +8,10 @@ use std::ffi::CStr;
 lazy_static! {
     pub static ref DESKTOP_APP_INFO_LOOKUP_EXTENSION_POINT_NAME: &'static str = unsafe{CStr::from_ptr(ffi::G_DESKTOP_APP_INFO_LOOKUP_EXTENSION_POINT_NAME).to_str().unwrap()};
 }
+#[cfg(any(feature = "v2_58", feature = "dox"))]
+lazy_static! {
+    pub static ref DRIVE_IDENTIFIER_KIND_UNIX_DEVICE: &'static str = unsafe{CStr::from_ptr(ffi::G_DRIVE_IDENTIFIER_KIND_UNIX_DEVICE).to_str().unwrap()};
+}
 lazy_static! {
     pub static ref FILE_ATTRIBUTE_ACCESS_CAN_DELETE: &'static str = unsafe{CStr::from_ptr(ffi::G_FILE_ATTRIBUTE_ACCESS_CAN_DELETE).to_str().unwrap()};
 }
@@ -169,7 +173,6 @@ lazy_static! {
 lazy_static! {
     pub static ref FILE_ATTRIBUTE_STANDARD_SORT_ORDER: &'static str = unsafe{CStr::from_ptr(ffi::G_FILE_ATTRIBUTE_STANDARD_SORT_ORDER).to_str().unwrap()};
 }
-#[cfg(any(feature = "v2_34", feature = "dox"))]
 lazy_static! {
     pub static ref FILE_ATTRIBUTE_STANDARD_SYMBOLIC_ICON: &'static str = unsafe{CStr::from_ptr(ffi::G_FILE_ATTRIBUTE_STANDARD_SYMBOLIC_ICON).to_str().unwrap()};
 }
@@ -185,7 +188,6 @@ lazy_static! {
 lazy_static! {
     pub static ref FILE_ATTRIBUTE_THUMBNAILING_FAILED: &'static str = unsafe{CStr::from_ptr(ffi::G_FILE_ATTRIBUTE_THUMBNAILING_FAILED).to_str().unwrap()};
 }
-#[cfg(any(feature = "v2_40", feature = "dox"))]
 lazy_static! {
     pub static ref FILE_ATTRIBUTE_THUMBNAIL_IS_VALID: &'static str = unsafe{CStr::from_ptr(ffi::G_FILE_ATTRIBUTE_THUMBNAIL_IS_VALID).to_str().unwrap()};
 }
@@ -258,11 +260,9 @@ lazy_static! {
 lazy_static! {
     pub static ref MENU_ATTRIBUTE_ACTION: &'static str = unsafe{CStr::from_ptr(ffi::G_MENU_ATTRIBUTE_ACTION).to_str().unwrap()};
 }
-#[cfg(any(feature = "v2_36", feature = "dox"))]
 lazy_static! {
     pub static ref MENU_ATTRIBUTE_ACTION_NAMESPACE: &'static str = unsafe{CStr::from_ptr(ffi::G_MENU_ATTRIBUTE_ACTION_NAMESPACE).to_str().unwrap()};
 }
-#[cfg(any(feature = "v2_38", feature = "dox"))]
 lazy_static! {
     pub static ref MENU_ATTRIBUTE_ICON: &'static str = unsafe{CStr::from_ptr(ffi::G_MENU_ATTRIBUTE_ICON).to_str().unwrap()};
 }
@@ -308,6 +308,7 @@ lazy_static! {
 lazy_static! {
     pub static ref VOLUME_IDENTIFIER_KIND_CLASS: &'static str = unsafe{CStr::from_ptr(ffi::G_VOLUME_IDENTIFIER_KIND_CLASS).to_str().unwrap()};
 }
+#[cfg_attr(feature = "v2_58", deprecated)]
 lazy_static! {
     pub static ref VOLUME_IDENTIFIER_KIND_HAL_UDI: &'static str = unsafe{CStr::from_ptr(ffi::G_VOLUME_IDENTIFIER_KIND_HAL_UDI).to_str().unwrap()};
 }

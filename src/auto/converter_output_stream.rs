@@ -7,21 +7,13 @@ use FilterOutputStream;
 use OutputStream;
 use PollableOutputStream;
 use ffi;
-use glib;
-use glib::object::Downcast;
+use glib::object::Cast;
 use glib::object::IsA;
-use glib::signal::SignalHandlerId;
-use glib::signal::connect;
 use glib::translate::*;
-use glib_ffi;
-use gobject_ffi;
-use std::boxed::Box as Box_;
-use std::mem;
-use std::mem::transmute;
-use std::ptr;
+use std::fmt;
 
 glib_wrapper! {
-    pub struct ConverterOutputStream(Object<ffi::GConverterOutputStream, ffi::GConverterOutputStreamClass>): FilterOutputStream, OutputStream, PollableOutputStream;
+    pub struct ConverterOutputStream(Object<ffi::GConverterOutputStream, ffi::GConverterOutputStreamClass, ConverterOutputStreamClass>) @extends FilterOutputStream, OutputStream, @implements PollableOutputStream;
 
     match fn {
         get_type => || ffi::g_converter_output_stream_get_type(),
@@ -31,35 +23,27 @@ glib_wrapper! {
 impl ConverterOutputStream {
     pub fn new<P: IsA<OutputStream>, Q: IsA<Converter>>(base_stream: &P, converter: &Q) -> ConverterOutputStream {
         unsafe {
-            OutputStream::from_glib_full(ffi::g_converter_output_stream_new(base_stream.to_glib_none().0, converter.to_glib_none().0)).downcast_unchecked()
+            OutputStream::from_glib_full(ffi::g_converter_output_stream_new(base_stream.as_ref().to_glib_none().0, converter.as_ref().to_glib_none().0)).unsafe_cast()
         }
     }
 }
 
-pub trait ConverterOutputStreamExt {
-    fn get_converter(&self) -> Option<Converter>;
+pub const NONE_CONVERTER_OUTPUT_STREAM: Option<&ConverterOutputStream> = None;
 
-    fn connect_property_converter_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
+pub trait ConverterOutputStreamExt: 'static {
+    fn get_converter(&self) -> Option<Converter>;
 }
 
-impl<O: IsA<ConverterOutputStream> + IsA<glib::object::Object>> ConverterOutputStreamExt for O {
+impl<O: IsA<ConverterOutputStream>> ConverterOutputStreamExt for O {
     fn get_converter(&self) -> Option<Converter> {
         unsafe {
-            from_glib_none(ffi::g_converter_output_stream_get_converter(self.to_glib_none().0))
-        }
-    }
-
-    fn connect_property_converter_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId {
-        unsafe {
-            let f: Box_<Box_<Fn(&Self) + 'static>> = Box_::new(Box_::new(f));
-            connect(self.to_glib_none().0, "notify::converter",
-                transmute(notify_converter_trampoline::<Self> as usize), Box_::into_raw(f) as *mut _)
+            from_glib_none(ffi::g_converter_output_stream_get_converter(self.as_ref().to_glib_none().0))
         }
     }
 }
 
-unsafe extern "C" fn notify_converter_trampoline<P>(this: *mut ffi::GConverterOutputStream, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
-where P: IsA<ConverterOutputStream> {
-    let f: &&(Fn(&P) + 'static) = transmute(f);
-    f(&ConverterOutputStream::from_glib_borrow(this).downcast_unchecked())
+impl fmt::Display for ConverterOutputStream {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ConverterOutputStream")
+    }
 }

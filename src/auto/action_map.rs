@@ -6,23 +6,22 @@ use Action;
 use ffi;
 use glib::object::IsA;
 use glib::translate::*;
-use glib_ffi;
-use gobject_ffi;
-use std::mem;
-use std::ptr;
+use std::fmt;
 
 glib_wrapper! {
-    pub struct ActionMap(Object<ffi::GActionMap, ffi::GActionMapInterface>);
+    pub struct ActionMap(Interface<ffi::GActionMap>);
 
     match fn {
         get_type => || ffi::g_action_map_get_type(),
     }
 }
 
-pub trait ActionMapExt {
+pub const NONE_ACTION_MAP: Option<&ActionMap> = None;
+
+pub trait ActionMapExt: 'static {
     fn add_action<P: IsA<Action>>(&self, action: &P);
 
-    //fn add_action_entries<P: Into<Option</*Unimplemented*/Fundamental: Pointer>>>(&self, entries: /*Ignored*/&[&ActionEntry], user_data: P);
+    //fn add_action_entries(&self, entries: /*Ignored*/&[&ActionEntry], user_data: /*Unimplemented*/Option<Fundamental: Pointer>);
 
     fn lookup_action(&self, action_name: &str) -> Option<Action>;
 
@@ -32,23 +31,29 @@ pub trait ActionMapExt {
 impl<O: IsA<ActionMap>> ActionMapExt for O {
     fn add_action<P: IsA<Action>>(&self, action: &P) {
         unsafe {
-            ffi::g_action_map_add_action(self.to_glib_none().0, action.to_glib_none().0);
+            ffi::g_action_map_add_action(self.as_ref().to_glib_none().0, action.as_ref().to_glib_none().0);
         }
     }
 
-    //fn add_action_entries<P: Into<Option</*Unimplemented*/Fundamental: Pointer>>>(&self, entries: /*Ignored*/&[&ActionEntry], user_data: P) {
+    //fn add_action_entries(&self, entries: /*Ignored*/&[&ActionEntry], user_data: /*Unimplemented*/Option<Fundamental: Pointer>) {
     //    unsafe { TODO: call ffi::g_action_map_add_action_entries() }
     //}
 
     fn lookup_action(&self, action_name: &str) -> Option<Action> {
         unsafe {
-            from_glib_none(ffi::g_action_map_lookup_action(self.to_glib_none().0, action_name.to_glib_none().0))
+            from_glib_none(ffi::g_action_map_lookup_action(self.as_ref().to_glib_none().0, action_name.to_glib_none().0))
         }
     }
 
     fn remove_action(&self, action_name: &str) {
         unsafe {
-            ffi::g_action_map_remove_action(self.to_glib_none().0, action_name.to_glib_none().0);
+            ffi::g_action_map_remove_action(self.as_ref().to_glib_none().0, action_name.to_glib_none().0);
         }
+    }
+}
+
+impl fmt::Display for ActionMap {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ActionMap")
     }
 }
