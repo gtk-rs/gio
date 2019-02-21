@@ -4,21 +4,19 @@
 
 use SocketConnectable;
 use ffi;
-use glib;
-use glib::object::Downcast;
+use glib::GString;
+use glib::object::Cast;
 use glib::object::IsA;
 use glib::signal::SignalHandlerId;
-use glib::signal::connect;
+use glib::signal::connect_raw;
 use glib::translate::*;
 use glib_ffi;
-use gobject_ffi;
 use std::boxed::Box as Box_;
-use std::mem;
+use std::fmt;
 use std::mem::transmute;
-use std::ptr;
 
 glib_wrapper! {
-    pub struct NetworkService(Object<ffi::GNetworkService, ffi::GNetworkServiceClass>): SocketConnectable;
+    pub struct NetworkService(Object<ffi::GNetworkService, ffi::GNetworkServiceClass, NetworkServiceClass>) @implements SocketConnectable;
 
     match fn {
         get_type => || ffi::g_network_service_get_type(),
@@ -33,110 +31,70 @@ impl NetworkService {
     }
 }
 
-pub trait NetworkServiceExt {
-    fn get_domain(&self) -> Option<String>;
+pub const NONE_NETWORK_SERVICE: Option<&NetworkService> = None;
 
-    fn get_protocol(&self) -> Option<String>;
+pub trait NetworkServiceExt: 'static {
+    fn get_domain(&self) -> Option<GString>;
 
-    fn get_scheme(&self) -> Option<String>;
+    fn get_protocol(&self) -> Option<GString>;
 
-    fn get_service(&self) -> Option<String>;
+    fn get_scheme(&self) -> Option<GString>;
+
+    fn get_service(&self) -> Option<GString>;
 
     fn set_scheme(&self, scheme: &str);
 
-    fn connect_property_domain_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
-
-    fn connect_property_protocol_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
-
     fn connect_property_scheme_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
-
-    fn connect_property_service_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
 }
 
-impl<O: IsA<NetworkService> + IsA<glib::object::Object>> NetworkServiceExt for O {
-    fn get_domain(&self) -> Option<String> {
+impl<O: IsA<NetworkService>> NetworkServiceExt for O {
+    fn get_domain(&self) -> Option<GString> {
         unsafe {
-            from_glib_none(ffi::g_network_service_get_domain(self.to_glib_none().0))
+            from_glib_none(ffi::g_network_service_get_domain(self.as_ref().to_glib_none().0))
         }
     }
 
-    fn get_protocol(&self) -> Option<String> {
+    fn get_protocol(&self) -> Option<GString> {
         unsafe {
-            from_glib_none(ffi::g_network_service_get_protocol(self.to_glib_none().0))
+            from_glib_none(ffi::g_network_service_get_protocol(self.as_ref().to_glib_none().0))
         }
     }
 
-    fn get_scheme(&self) -> Option<String> {
+    fn get_scheme(&self) -> Option<GString> {
         unsafe {
-            from_glib_none(ffi::g_network_service_get_scheme(self.to_glib_none().0))
+            from_glib_none(ffi::g_network_service_get_scheme(self.as_ref().to_glib_none().0))
         }
     }
 
-    fn get_service(&self) -> Option<String> {
+    fn get_service(&self) -> Option<GString> {
         unsafe {
-            from_glib_none(ffi::g_network_service_get_service(self.to_glib_none().0))
+            from_glib_none(ffi::g_network_service_get_service(self.as_ref().to_glib_none().0))
         }
     }
 
     fn set_scheme(&self, scheme: &str) {
         unsafe {
-            ffi::g_network_service_set_scheme(self.to_glib_none().0, scheme.to_glib_none().0);
-        }
-    }
-
-    fn connect_property_domain_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId {
-        unsafe {
-            let f: Box_<Box_<Fn(&Self) + 'static>> = Box_::new(Box_::new(f));
-            connect(self.to_glib_none().0, "notify::domain",
-                transmute(notify_domain_trampoline::<Self> as usize), Box_::into_raw(f) as *mut _)
-        }
-    }
-
-    fn connect_property_protocol_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId {
-        unsafe {
-            let f: Box_<Box_<Fn(&Self) + 'static>> = Box_::new(Box_::new(f));
-            connect(self.to_glib_none().0, "notify::protocol",
-                transmute(notify_protocol_trampoline::<Self> as usize), Box_::into_raw(f) as *mut _)
+            ffi::g_network_service_set_scheme(self.as_ref().to_glib_none().0, scheme.to_glib_none().0);
         }
     }
 
     fn connect_property_scheme_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId {
         unsafe {
-            let f: Box_<Box_<Fn(&Self) + 'static>> = Box_::new(Box_::new(f));
-            connect(self.to_glib_none().0, "notify::scheme",
-                transmute(notify_scheme_trampoline::<Self> as usize), Box_::into_raw(f) as *mut _)
-        }
-    }
-
-    fn connect_property_service_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId {
-        unsafe {
-            let f: Box_<Box_<Fn(&Self) + 'static>> = Box_::new(Box_::new(f));
-            connect(self.to_glib_none().0, "notify::service",
-                transmute(notify_service_trampoline::<Self> as usize), Box_::into_raw(f) as *mut _)
+            let f: Box_<F> = Box_::new(f);
+            connect_raw(self.as_ptr() as *mut _, b"notify::scheme\0".as_ptr() as *const _,
+                Some(transmute(notify_scheme_trampoline::<Self, F> as usize)), Box_::into_raw(f))
         }
     }
 }
 
-unsafe extern "C" fn notify_domain_trampoline<P>(this: *mut ffi::GNetworkService, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
+unsafe extern "C" fn notify_scheme_trampoline<P, F: Fn(&P) + 'static>(this: *mut ffi::GNetworkService, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
 where P: IsA<NetworkService> {
-    let f: &&(Fn(&P) + 'static) = transmute(f);
-    f(&NetworkService::from_glib_borrow(this).downcast_unchecked())
+    let f: &F = transmute(f);
+    f(&NetworkService::from_glib_borrow(this).unsafe_cast())
 }
 
-unsafe extern "C" fn notify_protocol_trampoline<P>(this: *mut ffi::GNetworkService, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
-where P: IsA<NetworkService> {
-    let f: &&(Fn(&P) + 'static) = transmute(f);
-    f(&NetworkService::from_glib_borrow(this).downcast_unchecked())
-}
-
-unsafe extern "C" fn notify_scheme_trampoline<P>(this: *mut ffi::GNetworkService, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
-where P: IsA<NetworkService> {
-    let f: &&(Fn(&P) + 'static) = transmute(f);
-    f(&NetworkService::from_glib_borrow(this).downcast_unchecked())
-}
-
-unsafe extern "C" fn notify_service_trampoline<P>(this: *mut ffi::GNetworkService, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
-where P: IsA<NetworkService> {
-    let f: &&(Fn(&P) + 'static) = transmute(f);
-    f(&NetworkService::from_glib_borrow(this).downcast_unchecked())
+impl fmt::Display for NetworkService {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "NetworkService")
+    }
 }

@@ -2,10 +2,11 @@
 girs_dir = "gir-files"
 library = "Gio"
 version = "2.0"
-min_cfg_version = "2.32"
+min_cfg_version = "2.42"
 target_path = "."
 work_mode = "normal"
 single_version_file = true
+deprecate_by_min_version = true
 
 generate = [
     # "Gio.Task",
@@ -46,7 +47,6 @@ generate = [
     "Gio.IOErrorEnum",
     "Gio.IOStreamSpliceFlags",
     "Gio.ListModel",
-    "Gio.ListStore",
     "Gio.LoadableIcon",
     "Gio.Menu",
     "Gio.MenuAttributeIter",
@@ -65,8 +65,10 @@ generate = [
     "Gio.OutputStreamSpliceFlags",
     "Gio.PasswordSave",
     "Gio.Permission",
+    "Gio.PropertyAction",
     "Gio.Proxy",
     "Gio.ProxyResolver",
+    "Gio.RemoteActionGroup",
     "Gio.Resolver",
     "Gio.ResolverRecordType",
     "Gio.ResourceError",
@@ -94,7 +96,6 @@ generate = [
     "Gio.SrvTarget",
     "Gio.SubprocessFlags",
     "Gio.TcpConnection",
-    "Gio.ThemedIcon",
     "Gio.ThreadedSocketService",
     "Gio.TlsAuthenticationMode",
     "Gio.TlsCertificate",
@@ -111,9 +112,7 @@ generate = [
     "Gio.TlsPasswordFlags",
     "Gio.TlsRehandshakeMode",
     "Gio.TlsServerConnection",
-    "Gio.Vfs",
     "Gio.Volume",
-    "Gio.VolumeMonitor",
     "Gio.ZlibCompressor",
     "Gio.ZlibCompressorFormat",
     "Gio.ZlibDecompressor",
@@ -128,6 +127,8 @@ manual = [
     "GLib.IOCondition",
     "GLib.KeyFile",
     "GLib.MainContext",
+    "GLib.OptionArg",
+    "GLib.OptionFlags",
     "GLib.Priority",
     "GLib.SeekType",
     "GLib.Source",
@@ -199,6 +200,7 @@ status = "generate"
 [[object]]
 name = "Gio.Application"
 status = "generate"
+manual_traits = ["ApplicationExtManual"]
     [[object.signal]]
     name = "open"
     ignore = true
@@ -246,7 +248,6 @@ status = "generate"
 [[object]]
 name = "Gio.Cancellable"
 status = "generate"
-trait = false
 concurrency = "send+sync"
     [[object.function]]
     name = "reset"
@@ -260,6 +261,7 @@ concurrency = "send+sync"
 [[object]]
 name = "Gio.Converter"
 status = "generate"
+manual_traits = ["ConverterExtManual"]
     [[object.function]]
     name = "convert"
     ignore = true
@@ -303,6 +305,7 @@ cfg_condition = "not(windows)"
 name = "Gio.File"
 status = "generate"
 concurrency = "send+sync"
+manual_traits = ["FileExtManual"]
     [[object.function]]
     name = "new_for_path"
         [object.function.return]
@@ -356,6 +359,10 @@ status = "generate"
     name = "base-stream"
     #readonly
     ignore = true
+    [[object.property]]
+    name = "close-base-stream"
+    #has get/set function, ConstructOnly
+    generate = ["notify"]
 
 [[object]]
 name =  "Gio.InetAddressMask"
@@ -365,25 +372,11 @@ concurrency = "send+sync"
     name = "get_address"
         [object.function.return]
         nullable = false
-    [[object.function]]
-    name = "equal"
-    # conflicting implementations
-    ignore = true
 
 [[object]]
 name = "Gio.InetAddress"
 status = "generate"
 concurrency = "send+sync"
-    [[object.function]]
-    name = "equal"
-    # conflicting implementations
-    ignore = true
-
-    [[object.function]]
-    name = "to_string"
-    # conflicting implementations
-    ignore = true
-
     [[object.function]]
     name = "new_from_bytes"
     # broken and needs some closer integration with the corresponding std types
@@ -402,6 +395,7 @@ concurrency = "send+sync"
 [[object]]
 name = "Gio.InputStream"
 status = "generate"
+manual_traits = ["InputStreamExtManual"]
     [[object.function]]
     pattern = "read(_all)?(_async)?"
     #mutable buffer
@@ -422,6 +416,11 @@ status = "generate"
     name = "output-stream"
     #readonly
     ignore = true
+
+[[object]]
+name = "Gio.ListStore"
+status = "generate"
+manual_traits = ["ListStoreExtManual"]
 
 [[object]]
 name = "Gio.MemoryInputStream"
@@ -482,6 +481,7 @@ status = "generate"
 [[object]]
 name = "Gio.OutputStream"
 status = "generate"
+manual_traits = ["OutputStreamExtManual"]
     [[object.function]]
     name = "write_async"
     #AsRef<u8>
@@ -490,10 +490,15 @@ status = "generate"
     name = "write_all_async"
     #AsRef<u8>
     ignore = true
+    [[object.function]]
+    name = "write_all"
+    # special return value
+    ignore = true
 
 [[object]]
 name = "Gio.PollableInputStream"
 status = "generate"
+manual_traits = ["PollableInputStreamExtManual"]
     [[object.function]]
     name = "create_source"
     # manual source implementation
@@ -506,6 +511,7 @@ status = "generate"
 [[object]]
 name = "Gio.PollableOutputStream"
 status = "generate"
+manual_traits = ["PollableOutputStreamExtManual"]
     [[object.function]]
     name = "create_source"
     # manual source implementation
@@ -573,6 +579,7 @@ status = "generate"
 name = "Gio.Socket"
 status = "generate"
 concurrency = "send-unique"
+manual_traits = ["SocketExtManual"]
     [[object.function]]
     name = "new_from_fd"
     # has to use RawFd / SOCKET
@@ -611,6 +618,7 @@ concurrency = "send+sync"
 [[object]]
 name = "Gio.SocketListener"
 status = "generate"
+manual_traits = ["SocketListenerExtManual"]
     [[object.function]]
     name = "accept_socket_async"
     # finish function misses nullable return annotation
@@ -627,6 +635,9 @@ status = "generate"
     [[object.function]]
     name = "communicate_utf8_async"
     ignore = true
+    [[object.function]]
+    name = "send_signal"
+    cfg_condition = "not(windows)"
 
 [[object]]
 name = "Gio.SubprocessLauncher"
@@ -660,6 +671,14 @@ status = "generate"
     cfg_condition = "unix"
 
 [[object]]
+name = "Gio.ThemedIcon"
+status = "generate"
+    [[object.property]]
+    name = "names"
+    # ConstructOnly
+    generate = ["notify"]
+
+[[object]]
 name = "Gio.TlsPassword"
 status = "generate"
     [[object.function]]
@@ -677,6 +696,7 @@ name = "Gio.UnixSocketAddress"
 status = "generate"
 concurrency = "send+sync"
 cfg_condition = "unix"
+manual_traits = ["UnixSocketAddressExtManual"]
     [[object.function]]
     name = "new"
     ignore = true
@@ -691,3 +711,16 @@ cfg_condition = "unix"
 name = "Gio.UnixSocketAddressType"
 status = "generate"
 cfg_condition = "unix"
+
+[[object]]
+name = "Gio.Vfs"
+status = "generate"
+concurrency = "send+sync"
+
+[[object]]
+name = "Gio.VolumeMonitor"
+status = "generate"
+    [[object.function]]
+    name = "get"
+        [object.function.return]
+        nullable = false

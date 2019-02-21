@@ -5,11 +5,9 @@
 use Error;
 use SettingsSchema;
 use ffi;
+use glib::GString;
 use glib::translate::*;
-use glib_ffi;
-use gobject_ffi;
 use std;
-use std::mem;
 use std::ptr;
 
 glib_wrapper! {
@@ -26,16 +24,14 @@ glib_wrapper! {
 impl SettingsSchemaSource {
     pub fn new_from_directory<'a, P: AsRef<std::path::Path>, Q: Into<Option<&'a SettingsSchemaSource>>>(directory: P, parent: Q, trusted: bool) -> Result<SettingsSchemaSource, Error> {
         let parent = parent.into();
-        let parent = parent.to_glib_none();
         unsafe {
             let mut error = ptr::null_mut();
-            let ret = ffi::g_settings_schema_source_new_from_directory(directory.as_ref().to_glib_none().0, parent.0, trusted.to_glib(), &mut error);
+            let ret = ffi::g_settings_schema_source_new_from_directory(directory.as_ref().to_glib_none().0, parent.to_glib_none().0, trusted.to_glib(), &mut error);
             if error.is_null() { Ok(from_glib_full(ret)) } else { Err(from_glib_full(error)) }
         }
     }
 
-    #[cfg(any(feature = "v2_40", feature = "dox"))]
-    pub fn list_schemas(&self, recursive: bool) -> (Vec<String>, Vec<String>) {
+    pub fn list_schemas(&self, recursive: bool) -> (Vec<GString>, Vec<GString>) {
         unsafe {
             let mut non_relocatable = ptr::null_mut();
             let mut relocatable = ptr::null_mut();

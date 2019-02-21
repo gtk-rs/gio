@@ -5,21 +5,12 @@
 use EmblemOrigin;
 use Icon;
 use ffi;
-use glib;
-use glib::object::Downcast;
 use glib::object::IsA;
-use glib::signal::SignalHandlerId;
-use glib::signal::connect;
 use glib::translate::*;
-use glib_ffi;
-use gobject_ffi;
-use std::boxed::Box as Box_;
-use std::mem;
-use std::mem::transmute;
-use std::ptr;
+use std::fmt;
 
 glib_wrapper! {
-    pub struct Emblem(Object<ffi::GEmblem, ffi::GEmblemClass>): Icon;
+    pub struct Emblem(Object<ffi::GEmblem, ffi::GEmblemClass, EmblemClass>) @implements Icon;
 
     match fn {
         get_type => || ffi::g_emblem_get_type(),
@@ -29,65 +20,41 @@ glib_wrapper! {
 impl Emblem {
     pub fn new<P: IsA<Icon>>(icon: &P) -> Emblem {
         unsafe {
-            from_glib_full(ffi::g_emblem_new(icon.to_glib_none().0))
+            from_glib_full(ffi::g_emblem_new(icon.as_ref().to_glib_none().0))
         }
     }
 
     pub fn new_with_origin<P: IsA<Icon>>(icon: &P, origin: EmblemOrigin) -> Emblem {
         unsafe {
-            from_glib_full(ffi::g_emblem_new_with_origin(icon.to_glib_none().0, origin.to_glib()))
+            from_glib_full(ffi::g_emblem_new_with_origin(icon.as_ref().to_glib_none().0, origin.to_glib()))
         }
     }
 }
 
-pub trait EmblemExt {
+pub const NONE_EMBLEM: Option<&Emblem> = None;
+
+pub trait EmblemExt: 'static {
     fn get_icon(&self) -> Option<Icon>;
 
     fn get_origin(&self) -> EmblemOrigin;
-
-    fn connect_property_icon_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
-
-    fn connect_property_origin_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
 }
 
-impl<O: IsA<Emblem> + IsA<glib::object::Object>> EmblemExt for O {
+impl<O: IsA<Emblem>> EmblemExt for O {
     fn get_icon(&self) -> Option<Icon> {
         unsafe {
-            from_glib_none(ffi::g_emblem_get_icon(self.to_glib_none().0))
+            from_glib_none(ffi::g_emblem_get_icon(self.as_ref().to_glib_none().0))
         }
     }
 
     fn get_origin(&self) -> EmblemOrigin {
         unsafe {
-            from_glib(ffi::g_emblem_get_origin(self.to_glib_none().0))
-        }
-    }
-
-    fn connect_property_icon_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId {
-        unsafe {
-            let f: Box_<Box_<Fn(&Self) + 'static>> = Box_::new(Box_::new(f));
-            connect(self.to_glib_none().0, "notify::icon",
-                transmute(notify_icon_trampoline::<Self> as usize), Box_::into_raw(f) as *mut _)
-        }
-    }
-
-    fn connect_property_origin_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId {
-        unsafe {
-            let f: Box_<Box_<Fn(&Self) + 'static>> = Box_::new(Box_::new(f));
-            connect(self.to_glib_none().0, "notify::origin",
-                transmute(notify_origin_trampoline::<Self> as usize), Box_::into_raw(f) as *mut _)
+            from_glib(ffi::g_emblem_get_origin(self.as_ref().to_glib_none().0))
         }
     }
 }
 
-unsafe extern "C" fn notify_icon_trampoline<P>(this: *mut ffi::GEmblem, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
-where P: IsA<Emblem> {
-    let f: &&(Fn(&P) + 'static) = transmute(f);
-    f(&Emblem::from_glib_borrow(this).downcast_unchecked())
-}
-
-unsafe extern "C" fn notify_origin_trampoline<P>(this: *mut ffi::GEmblem, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
-where P: IsA<Emblem> {
-    let f: &&(Fn(&P) + 'static) = transmute(f);
-    f(&Emblem::from_glib_borrow(this).downcast_unchecked())
+impl fmt::Display for Emblem {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Emblem")
+    }
 }
