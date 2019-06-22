@@ -2,54 +2,41 @@
 // from gir-files (https://github.com/gtk-rs/gir-files)
 // DO NOT EDIT
 
-use EmblemOrigin;
-use Icon;
-use ffi;
+use gio_sys;
 use glib::object::IsA;
 use glib::translate::*;
 use std::fmt;
+use EmblemOrigin;
+use Icon;
 
 glib_wrapper! {
-    pub struct Emblem(Object<ffi::GEmblem, ffi::GEmblemClass, EmblemClass>) @implements Icon;
+    pub struct Emblem(Object<gio_sys::GEmblem, gio_sys::GEmblemClass, EmblemClass>) @implements Icon;
 
     match fn {
-        get_type => || ffi::g_emblem_get_type(),
+        get_type => || gio_sys::g_emblem_get_type(),
     }
 }
 
 impl Emblem {
     pub fn new<P: IsA<Icon>>(icon: &P) -> Emblem {
-        unsafe {
-            from_glib_full(ffi::g_emblem_new(icon.as_ref().to_glib_none().0))
-        }
+        unsafe { from_glib_full(gio_sys::g_emblem_new(icon.as_ref().to_glib_none().0)) }
     }
 
     pub fn new_with_origin<P: IsA<Icon>>(icon: &P, origin: EmblemOrigin) -> Emblem {
         unsafe {
-            from_glib_full(ffi::g_emblem_new_with_origin(icon.as_ref().to_glib_none().0, origin.to_glib()))
-        }
-    }
-}
-
-pub const NONE_EMBLEM: Option<&Emblem> = None;
-
-pub trait EmblemExt: 'static {
-    fn get_icon(&self) -> Option<Icon>;
-
-    fn get_origin(&self) -> EmblemOrigin;
-}
-
-impl<O: IsA<Emblem>> EmblemExt for O {
-    fn get_icon(&self) -> Option<Icon> {
-        unsafe {
-            from_glib_none(ffi::g_emblem_get_icon(self.as_ref().to_glib_none().0))
+            from_glib_full(gio_sys::g_emblem_new_with_origin(
+                icon.as_ref().to_glib_none().0,
+                origin.to_glib(),
+            ))
         }
     }
 
-    fn get_origin(&self) -> EmblemOrigin {
-        unsafe {
-            from_glib(ffi::g_emblem_get_origin(self.as_ref().to_glib_none().0))
-        }
+    pub fn get_icon(&self) -> Option<Icon> {
+        unsafe { from_glib_none(gio_sys::g_emblem_get_icon(self.to_glib_none().0)) }
+    }
+
+    pub fn get_origin(&self) -> EmblemOrigin {
+        unsafe { from_glib(gio_sys::g_emblem_get_origin(self.to_glib_none().0)) }
     }
 }
 

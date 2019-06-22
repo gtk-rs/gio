@@ -31,11 +31,15 @@ generate = [
     "Gio.Emblem",
     "Gio.EmblemedIcon",
     "Gio.EmblemOrigin",
+    "Gio.FileAttributeStatus",
+    "Gio.FileAttributeType",
+    "Gio.FileCopyFlags",
     "Gio.FileCreateFlags",
     "Gio.FileIcon",
     "Gio.FileInfo",
     "Gio.FileInputStream",
     "Gio.FileIOStream",
+    "Gio.FileMeasureFlags",
     "Gio.FileMonitor",
     "Gio.FileMonitorEvent",
     "Gio.FileMonitorFlags",
@@ -118,11 +122,22 @@ generate = [
     "Gio.ZlibDecompressor",
 ]
 
+builders = [
+    "Gio.BufferedInputStream",
+    "Gio.BufferedOutputStream",
+    "Gio.CharsetConverterBuilder",
+    "Gio.ConverterInputStreamBuilder",
+    "Gio.ConverterOutputStreamBuilder",
+    "Gio.DataInputStreamBuilder",
+    "Gio.DataOutputStreamBuilder",
+]
+
 ignore = [
 ]
 
 manual = [
     "GLib.Bytes",
+    "GLib.DateTime",
     "GLib.Error",
     "GLib.IOCondition",
     "GLib.KeyFile",
@@ -130,11 +145,14 @@ manual = [
     "GLib.OptionArg",
     "GLib.OptionFlags",
     "GLib.Priority",
+    "GLib.Quark",
     "GLib.SeekType",
     "GLib.Source",
+    "GLib.TimeVal",
     "GLib.Variant",
     "GLib.VariantType",
     "GObject.Object",
+    "GObject.Value",
 ]
 
 [[object]]
@@ -201,6 +219,7 @@ status = "generate"
 name = "Gio.Application"
 status = "generate"
 manual_traits = ["ApplicationExtManual"]
+generate_builder = true
     [[object.signal]]
     name = "open"
     ignore = true
@@ -343,6 +362,27 @@ manual_traits = ["FileExtManual"]
     name = "replace_contents_async"
     # AsRef
     ignore = true
+    [[object.function]]
+    name = "get_uri_scheme"
+        [object.function.return]
+        nullable = false
+    [[object.function]]
+    name = "get_uri"
+        [object.function.return]
+        nullable = false
+
+[[object]]
+name = "Gio.FileAttributeMatcher"
+status = "generate"
+    [[object.function]]
+    name = "enumerate_next"
+    # Better API with `IntoIter`
+    ignore = true
+    [[object.function]]
+    name = "subtract"
+        [[object.function.parameter]]
+        name = "subtract"
+        nullable = true
 
 [[object]]
 name = "Gio.FilterInputStream"
@@ -420,6 +460,7 @@ status = "generate"
 [[object]]
 name = "Gio.ListStore"
 status = "generate"
+generate_builder = true
 manual_traits = ["ListStoreExtManual"]
 
 [[object]]
@@ -624,6 +665,11 @@ manual_traits = ["SocketListenerExtManual"]
     # finish function misses nullable return annotation
     ignore = true
 
+    [[object.function]]
+    name = "accept_async"
+    # finish function misses nullable return annotation
+    ignore = true
+
 [[object]]
 name = "Gio.Subprocess"
 status = "generate"
@@ -689,6 +735,64 @@ status = "generate"
     [[object.function]]
     # missing (element-type guint8) annotation
     name = "set_value"
+    ignore = true
+
+[[object]]
+name = "Gio.UnixInputStream"
+status = "generate"
+cfg_condition = "unix"
+manual_traits = ["UnixInputStreamExtManual"]
+    [[object.function]]
+    name = "new"
+    # has to use RawFd
+    ignore = true
+
+    [[object.function]]
+    name = "set_close_fd"
+    # Can cause file descriptor leaks
+    ignore = true
+
+    [[object.function]]
+    name = "get_fd"
+    # has to use RawFd
+    ignore = true
+
+    [[object.property]]
+    name = "fd"
+    # has to use RawFd
+    ignore = true
+
+    [[object.property]]
+    name = "close-fd"
+    ignore = true
+
+[[object]]
+name = "Gio.UnixOutputStream"
+status = "generate"
+cfg_condition = "unix"
+manual_traits = ["UnixOutputStreamExtManual"]
+    [[object.function]]
+    name = "new"
+    # has to use RawFd
+    ignore = true
+
+    [[object.function]]
+    name = "set_close_fd"
+    # Can cause file descriptor leaks
+    ignore = true
+
+    [[object.function]]
+    name = "get_fd"
+    # has to use RawFd
+    ignore = true
+
+    [[object.property]]
+    name = "fd"
+    # has to use RawFd
+    ignore = true
+
+    [[object.property]]
+    name = "close-fd"
     ignore = true
 
 [[object]]
