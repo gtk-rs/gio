@@ -2,24 +2,24 @@
 // from gir-files (https://github.com/gtk-rs/gir-files)
 // DO NOT EDIT
 
-use IOStream;
-use SocketConnection;
-use ffi;
+use gio_sys;
 use glib::object::Cast;
 use glib::object::IsA;
-use glib::signal::SignalHandlerId;
 use glib::signal::connect_raw;
+use glib::signal::SignalHandlerId;
 use glib::translate::*;
-use glib_ffi;
+use glib_sys;
 use std::boxed::Box as Box_;
 use std::fmt;
 use std::mem::transmute;
+use IOStream;
+use SocketConnection;
 
 glib_wrapper! {
-    pub struct TcpConnection(Object<ffi::GTcpConnection, ffi::GTcpConnectionClass, TcpConnectionClass>) @extends SocketConnection, IOStream;
+    pub struct TcpConnection(Object<gio_sys::GTcpConnection, gio_sys::GTcpConnectionClass, TcpConnectionClass>) @extends SocketConnection, IOStream;
 
     match fn {
-        get_type => || ffi::g_tcp_connection_get_type(),
+        get_type => || gio_sys::g_tcp_connection_get_type(),
     }
 }
 
@@ -30,35 +30,56 @@ pub trait TcpConnectionExt: 'static {
 
     fn set_graceful_disconnect(&self, graceful_disconnect: bool);
 
-    fn connect_property_graceful_disconnect_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
+    fn connect_property_graceful_disconnect_notify<F: Fn(&Self) + 'static>(
+        &self,
+        f: F,
+    ) -> SignalHandlerId;
 }
 
 impl<O: IsA<TcpConnection>> TcpConnectionExt for O {
     fn get_graceful_disconnect(&self) -> bool {
         unsafe {
-            from_glib(ffi::g_tcp_connection_get_graceful_disconnect(self.as_ref().to_glib_none().0))
+            from_glib(gio_sys::g_tcp_connection_get_graceful_disconnect(
+                self.as_ref().to_glib_none().0,
+            ))
         }
     }
 
     fn set_graceful_disconnect(&self, graceful_disconnect: bool) {
         unsafe {
-            ffi::g_tcp_connection_set_graceful_disconnect(self.as_ref().to_glib_none().0, graceful_disconnect.to_glib());
+            gio_sys::g_tcp_connection_set_graceful_disconnect(
+                self.as_ref().to_glib_none().0,
+                graceful_disconnect.to_glib(),
+            );
         }
     }
 
-    fn connect_property_graceful_disconnect_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId {
+    fn connect_property_graceful_disconnect_notify<F: Fn(&Self) + 'static>(
+        &self,
+        f: F,
+    ) -> SignalHandlerId {
+        unsafe extern "C" fn notify_graceful_disconnect_trampoline<P, F: Fn(&P) + 'static>(
+            this: *mut gio_sys::GTcpConnection,
+            _param_spec: glib_sys::gpointer,
+            f: glib_sys::gpointer,
+        ) where
+            P: IsA<TcpConnection>,
+        {
+            let f: &F = &*(f as *const F);
+            f(&TcpConnection::from_glib_borrow(this).unsafe_cast())
+        }
         unsafe {
             let f: Box_<F> = Box_::new(f);
-            connect_raw(self.as_ptr() as *mut _, b"notify::graceful-disconnect\0".as_ptr() as *const _,
-                Some(transmute(notify_graceful_disconnect_trampoline::<Self, F> as usize)), Box_::into_raw(f))
+            connect_raw(
+                self.as_ptr() as *mut _,
+                b"notify::graceful-disconnect\0".as_ptr() as *const _,
+                Some(transmute(
+                    notify_graceful_disconnect_trampoline::<Self, F> as usize,
+                )),
+                Box_::into_raw(f),
+            )
         }
     }
-}
-
-unsafe extern "C" fn notify_graceful_disconnect_trampoline<P, F: Fn(&P) + 'static>(this: *mut ffi::GTcpConnection, _param_spec: glib_ffi::gpointer, f: glib_ffi::gpointer)
-where P: IsA<TcpConnection> {
-    let f: &F = transmute(f);
-    f(&TcpConnection::from_glib_borrow(this).unsafe_cast())
 }
 
 impl fmt::Display for TcpConnection {

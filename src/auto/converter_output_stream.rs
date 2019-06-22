@@ -2,29 +2,86 @@
 // from gir-files (https://github.com/gtk-rs/gir-files)
 // DO NOT EDIT
 
+use gio_sys;
+use glib::object::Cast;
+use glib::object::IsA;
+use glib::translate::*;
+use glib::StaticType;
+use glib::ToValue;
+use std::fmt;
 use Converter;
 use FilterOutputStream;
 use OutputStream;
 use PollableOutputStream;
-use ffi;
-use glib::object::Cast;
-use glib::object::IsA;
-use glib::translate::*;
-use std::fmt;
 
 glib_wrapper! {
-    pub struct ConverterOutputStream(Object<ffi::GConverterOutputStream, ffi::GConverterOutputStreamClass, ConverterOutputStreamClass>) @extends FilterOutputStream, OutputStream, @implements PollableOutputStream;
+    pub struct ConverterOutputStream(Object<gio_sys::GConverterOutputStream, gio_sys::GConverterOutputStreamClass, ConverterOutputStreamClass>) @extends FilterOutputStream, OutputStream, @implements PollableOutputStream;
 
     match fn {
-        get_type => || ffi::g_converter_output_stream_get_type(),
+        get_type => || gio_sys::g_converter_output_stream_get_type(),
     }
 }
 
 impl ConverterOutputStream {
-    pub fn new<P: IsA<OutputStream>, Q: IsA<Converter>>(base_stream: &P, converter: &Q) -> ConverterOutputStream {
+    pub fn new<P: IsA<OutputStream>, Q: IsA<Converter>>(
+        base_stream: &P,
+        converter: &Q,
+    ) -> ConverterOutputStream {
         unsafe {
-            OutputStream::from_glib_full(ffi::g_converter_output_stream_new(base_stream.as_ref().to_glib_none().0, converter.as_ref().to_glib_none().0)).unsafe_cast()
+            OutputStream::from_glib_full(gio_sys::g_converter_output_stream_new(
+                base_stream.as_ref().to_glib_none().0,
+                converter.as_ref().to_glib_none().0,
+            ))
+            .unsafe_cast()
         }
+    }
+}
+
+pub struct ConverterOutputStreamBuilder {
+    converter: Option<Converter>,
+    base_stream: Option<OutputStream>,
+    close_base_stream: Option<bool>,
+}
+
+impl ConverterOutputStreamBuilder {
+    pub fn new() -> Self {
+        Self {
+            converter: None,
+            base_stream: None,
+            close_base_stream: None,
+        }
+    }
+
+    pub fn build(self) -> ConverterOutputStream {
+        let mut properties: Vec<(&str, &dyn ToValue)> = vec![];
+        if let Some(ref converter) = self.converter {
+            properties.push(("converter", converter));
+        }
+        if let Some(ref base_stream) = self.base_stream {
+            properties.push(("base-stream", base_stream));
+        }
+        if let Some(ref close_base_stream) = self.close_base_stream {
+            properties.push(("close-base-stream", close_base_stream));
+        }
+        glib::Object::new(ConverterOutputStream::static_type(), &properties)
+            .expect("object new")
+            .downcast()
+            .expect("downcast")
+    }
+
+    pub fn converter(mut self, converter: &Converter) -> Self {
+        self.converter = Some(converter.clone());
+        self
+    }
+
+    pub fn base_stream(mut self, base_stream: &OutputStream) -> Self {
+        self.base_stream = Some(base_stream.clone());
+        self
+    }
+
+    pub fn close_base_stream(mut self, close_base_stream: bool) -> Self {
+        self.close_base_stream = Some(close_base_stream);
+        self
     }
 }
 
@@ -37,7 +94,9 @@ pub trait ConverterOutputStreamExt: 'static {
 impl<O: IsA<ConverterOutputStream>> ConverterOutputStreamExt for O {
     fn get_converter(&self) -> Option<Converter> {
         unsafe {
-            from_glib_none(ffi::g_converter_output_stream_get_converter(self.as_ref().to_glib_none().0))
+            from_glib_none(gio_sys::g_converter_output_stream_get_converter(
+                self.as_ref().to_glib_none().0,
+            ))
         }
     }
 }

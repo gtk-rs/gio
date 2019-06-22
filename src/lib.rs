@@ -14,18 +14,14 @@ extern crate lazy_static;
 #[macro_use]
 extern crate glib;
 
-extern crate gio_sys as ffi;
-extern crate glib_sys as glib_ffi;
-extern crate gobject_sys as gobject_ffi;
-extern crate libc;
 extern crate fragile;
+extern crate gio_sys;
+extern crate glib_sys;
+extern crate gobject_sys;
+extern crate libc;
 
 #[cfg(feature = "futures")]
-extern crate futures_core;
-#[cfg(feature = "futures")]
-extern crate futures_channel;
-#[cfg(feature = "futures")]
-extern crate futures_util;
+extern crate futures;
 
 mod application;
 mod converter;
@@ -33,7 +29,10 @@ mod converter;
 mod desktop_app_info;
 mod error;
 mod file;
+mod file_attribute_matcher;
+pub use file_attribute_matcher::FileAttributematcherIter;
 mod flags;
+mod inet_address;
 mod input_stream;
 #[cfg(any(feature = "v2_44", feature = "dox"))]
 mod list_store;
@@ -48,18 +47,20 @@ mod socket_listener;
 mod subprocess;
 mod subprocess_launcher;
 #[cfg(any(unix, feature = "dox"))]
+mod unix_input_stream;
+#[cfg(any(unix, feature = "dox"))]
+mod unix_output_stream;
+#[cfg(any(unix, feature = "dox"))]
 mod unix_socket_address;
+pub use inet_address::InetAddressBytes;
 
 #[cfg(test)]
 mod test_util;
 
-pub use glib::{
-    Error,
-    Object,
-};
+pub use glib::{Error, Object};
 
-pub use auto::*;
 pub use auto::functions::*;
+pub use auto::*;
 
 pub mod signal {
     pub use glib::signal::Inhibit;
@@ -75,3 +76,7 @@ mod auto;
 mod gio_future;
 #[cfg(feature = "futures")]
 pub use gio_future::*;
+
+#[macro_use]
+#[cfg(feature = "subclassing")]
+pub mod subclass;

@@ -2,167 +2,315 @@
 // from gir-files (https://github.com/gtk-rs/gir-files)
 // DO NOT EDIT
 
+#[cfg(feature = "futures")]
+use futures::future;
+use gio_sys;
+use glib::object::IsA;
+use glib::translate::*;
+use glib_sys;
+use gobject_sys;
+#[cfg(feature = "futures")]
+use std::boxed::Box as Box_;
+use std::fmt;
+use std::ptr;
 use Cancellable;
 use Error;
 use TlsCertificateRequestFlags;
 use TlsConnection;
 use TlsInteractionResult;
 use TlsPassword;
-use ffi;
-#[cfg(feature = "futures")]
-use futures_core;
-use glib::object::IsA;
-use glib::translate::*;
-use glib_ffi;
-use gobject_ffi;
-#[cfg(feature = "futures")]
-use std::boxed::Box as Box_;
-use std::fmt;
-use std::ptr;
 
 glib_wrapper! {
-    pub struct TlsInteraction(Object<ffi::GTlsInteraction, ffi::GTlsInteractionClass, TlsInteractionClass>);
+    pub struct TlsInteraction(Object<gio_sys::GTlsInteraction, gio_sys::GTlsInteractionClass, TlsInteractionClass>);
 
     match fn {
-        get_type => || ffi::g_tls_interaction_get_type(),
+        get_type => || gio_sys::g_tls_interaction_get_type(),
     }
 }
 
 pub const NONE_TLS_INTERACTION: Option<&TlsInteraction> = None;
 
 pub trait TlsInteractionExt: 'static {
-    fn ask_password<'a, P: IsA<TlsPassword>, Q: IsA<Cancellable> + 'a, R: Into<Option<&'a Q>>>(&self, password: &P, cancellable: R) -> Result<TlsInteractionResult, Error>;
+    fn ask_password<P: IsA<TlsPassword>, Q: IsA<Cancellable>>(
+        &self,
+        password: &P,
+        cancellable: Option<&Q>,
+    ) -> Result<TlsInteractionResult, Error>;
 
-    fn ask_password_async<'a, P: IsA<TlsPassword>, Q: IsA<Cancellable> + 'a, R: Into<Option<&'a Q>>, S: FnOnce(Result<TlsInteractionResult, Error>) + Send + 'static>(&self, password: &P, cancellable: R, callback: S);
+    fn ask_password_async<
+        P: IsA<TlsPassword>,
+        Q: IsA<Cancellable>,
+        R: FnOnce(Result<TlsInteractionResult, Error>) + Send + 'static,
+    >(
+        &self,
+        password: &P,
+        cancellable: Option<&Q>,
+        callback: R,
+    );
 
     #[cfg(feature = "futures")]
-    fn ask_password_async_future<P: IsA<TlsPassword> + Clone + 'static>(&self, password: &P) -> Box_<futures_core::Future<Item = (Self, TlsInteractionResult), Error = (Self, Error)>> where Self: Sized + Clone;
+    fn ask_password_async_future<P: IsA<TlsPassword> + Clone + 'static>(
+        &self,
+        password: &P,
+    ) -> Box_<dyn future::Future<Output = Result<TlsInteractionResult, Error>> + std::marker::Unpin>;
 
-    fn invoke_ask_password<'a, P: IsA<TlsPassword>, Q: IsA<Cancellable> + 'a, R: Into<Option<&'a Q>>>(&self, password: &P, cancellable: R) -> Result<TlsInteractionResult, Error>;
+    fn invoke_ask_password<P: IsA<TlsPassword>, Q: IsA<Cancellable>>(
+        &self,
+        password: &P,
+        cancellable: Option<&Q>,
+    ) -> Result<TlsInteractionResult, Error>;
 
-    fn invoke_request_certificate<'a, P: IsA<TlsConnection>, Q: IsA<Cancellable> + 'a, R: Into<Option<&'a Q>>>(&self, connection: &P, flags: TlsCertificateRequestFlags, cancellable: R) -> Result<TlsInteractionResult, Error>;
+    fn invoke_request_certificate<P: IsA<TlsConnection>, Q: IsA<Cancellable>>(
+        &self,
+        connection: &P,
+        flags: TlsCertificateRequestFlags,
+        cancellable: Option<&Q>,
+    ) -> Result<TlsInteractionResult, Error>;
 
-    fn request_certificate<'a, P: IsA<TlsConnection>, Q: IsA<Cancellable> + 'a, R: Into<Option<&'a Q>>>(&self, connection: &P, flags: TlsCertificateRequestFlags, cancellable: R) -> Result<TlsInteractionResult, Error>;
+    fn request_certificate<P: IsA<TlsConnection>, Q: IsA<Cancellable>>(
+        &self,
+        connection: &P,
+        flags: TlsCertificateRequestFlags,
+        cancellable: Option<&Q>,
+    ) -> Result<TlsInteractionResult, Error>;
 
-    fn request_certificate_async<'a, P: IsA<TlsConnection>, Q: IsA<Cancellable> + 'a, R: Into<Option<&'a Q>>, S: FnOnce(Result<TlsInteractionResult, Error>) + Send + 'static>(&self, connection: &P, flags: TlsCertificateRequestFlags, cancellable: R, callback: S);
+    fn request_certificate_async<
+        P: IsA<TlsConnection>,
+        Q: IsA<Cancellable>,
+        R: FnOnce(Result<TlsInteractionResult, Error>) + Send + 'static,
+    >(
+        &self,
+        connection: &P,
+        flags: TlsCertificateRequestFlags,
+        cancellable: Option<&Q>,
+        callback: R,
+    );
 
     #[cfg(feature = "futures")]
-    fn request_certificate_async_future<P: IsA<TlsConnection> + Clone + 'static>(&self, connection: &P, flags: TlsCertificateRequestFlags) -> Box_<futures_core::Future<Item = (Self, TlsInteractionResult), Error = (Self, Error)>> where Self: Sized + Clone;
+    fn request_certificate_async_future<P: IsA<TlsConnection> + Clone + 'static>(
+        &self,
+        connection: &P,
+        flags: TlsCertificateRequestFlags,
+    ) -> Box_<dyn future::Future<Output = Result<TlsInteractionResult, Error>> + std::marker::Unpin>;
 }
 
 impl<O: IsA<TlsInteraction>> TlsInteractionExt for O {
-    fn ask_password<'a, P: IsA<TlsPassword>, Q: IsA<Cancellable> + 'a, R: Into<Option<&'a Q>>>(&self, password: &P, cancellable: R) -> Result<TlsInteractionResult, Error> {
-        let cancellable = cancellable.into();
+    fn ask_password<P: IsA<TlsPassword>, Q: IsA<Cancellable>>(
+        &self,
+        password: &P,
+        cancellable: Option<&Q>,
+    ) -> Result<TlsInteractionResult, Error> {
         unsafe {
             let mut error = ptr::null_mut();
-            let ret = ffi::g_tls_interaction_ask_password(self.as_ref().to_glib_none().0, password.as_ref().to_glib_none().0, cancellable.map(|p| p.as_ref()).to_glib_none().0, &mut error);
-            if error.is_null() { Ok(from_glib(ret)) } else { Err(from_glib_full(error)) }
+            let ret = gio_sys::g_tls_interaction_ask_password(
+                self.as_ref().to_glib_none().0,
+                password.as_ref().to_glib_none().0,
+                cancellable.map(|p| p.as_ref()).to_glib_none().0,
+                &mut error,
+            );
+            if error.is_null() {
+                Ok(from_glib(ret))
+            } else {
+                Err(from_glib_full(error))
+            }
         }
     }
 
-    fn ask_password_async<'a, P: IsA<TlsPassword>, Q: IsA<Cancellable> + 'a, R: Into<Option<&'a Q>>, S: FnOnce(Result<TlsInteractionResult, Error>) + Send + 'static>(&self, password: &P, cancellable: R, callback: S) {
-        let cancellable = cancellable.into();
-        let user_data: Box<S> = Box::new(callback);
-        unsafe extern "C" fn ask_password_async_trampoline<S: FnOnce(Result<TlsInteractionResult, Error>) + Send + 'static>(_source_object: *mut gobject_ffi::GObject, res: *mut ffi::GAsyncResult, user_data: glib_ffi::gpointer) {
+    fn ask_password_async<
+        P: IsA<TlsPassword>,
+        Q: IsA<Cancellable>,
+        R: FnOnce(Result<TlsInteractionResult, Error>) + Send + 'static,
+    >(
+        &self,
+        password: &P,
+        cancellable: Option<&Q>,
+        callback: R,
+    ) {
+        let user_data: Box<R> = Box::new(callback);
+        unsafe extern "C" fn ask_password_async_trampoline<
+            R: FnOnce(Result<TlsInteractionResult, Error>) + Send + 'static,
+        >(
+            _source_object: *mut gobject_sys::GObject,
+            res: *mut gio_sys::GAsyncResult,
+            user_data: glib_sys::gpointer,
+        ) {
             let mut error = ptr::null_mut();
-            let ret = ffi::g_tls_interaction_ask_password_finish(_source_object as *mut _, res, &mut error);
-            let result = if error.is_null() { Ok(from_glib(ret)) } else { Err(from_glib_full(error)) };
-            let callback: Box<S> = Box::from_raw(user_data as *mut _);
+            let ret = gio_sys::g_tls_interaction_ask_password_finish(
+                _source_object as *mut _,
+                res,
+                &mut error,
+            );
+            let result = if error.is_null() {
+                Ok(from_glib(ret))
+            } else {
+                Err(from_glib_full(error))
+            };
+            let callback: Box<R> = Box::from_raw(user_data as *mut _);
             callback(result);
         }
-        let callback = ask_password_async_trampoline::<S>;
+        let callback = ask_password_async_trampoline::<R>;
         unsafe {
-            ffi::g_tls_interaction_ask_password_async(self.as_ref().to_glib_none().0, password.as_ref().to_glib_none().0, cancellable.map(|p| p.as_ref()).to_glib_none().0, Some(callback), Box::into_raw(user_data) as *mut _);
+            gio_sys::g_tls_interaction_ask_password_async(
+                self.as_ref().to_glib_none().0,
+                password.as_ref().to_glib_none().0,
+                cancellable.map(|p| p.as_ref()).to_glib_none().0,
+                Some(callback),
+                Box::into_raw(user_data) as *mut _,
+            );
         }
     }
 
     #[cfg(feature = "futures")]
-    fn ask_password_async_future<P: IsA<TlsPassword> + Clone + 'static>(&self, password: &P) -> Box_<futures_core::Future<Item = (Self, TlsInteractionResult), Error = (Self, Error)>> where Self: Sized + Clone {
-        use GioFuture;
+    fn ask_password_async_future<P: IsA<TlsPassword> + Clone + 'static>(
+        &self,
+        password: &P,
+    ) -> Box_<dyn future::Future<Output = Result<TlsInteractionResult, Error>> + std::marker::Unpin>
+    {
         use fragile::Fragile;
+        use GioFuture;
 
         let password = password.clone();
         GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
             let send = Fragile::new(send);
-            let obj_clone = Fragile::new(obj.clone());
-            obj.ask_password_async(
-                 &password,
-                 Some(&cancellable),
-                 move |res| {
-                     let obj = obj_clone.into_inner();
-                     let res = res.map(|v| (obj.clone(), v)).map_err(|v| (obj.clone(), v));
-                     let _ = send.into_inner().send(res);
-                 },
-            );
+            obj.ask_password_async(&password, Some(&cancellable), move |res| {
+                let _ = send.into_inner().send(res);
+            });
 
             cancellable
         })
     }
 
-    fn invoke_ask_password<'a, P: IsA<TlsPassword>, Q: IsA<Cancellable> + 'a, R: Into<Option<&'a Q>>>(&self, password: &P, cancellable: R) -> Result<TlsInteractionResult, Error> {
-        let cancellable = cancellable.into();
+    fn invoke_ask_password<P: IsA<TlsPassword>, Q: IsA<Cancellable>>(
+        &self,
+        password: &P,
+        cancellable: Option<&Q>,
+    ) -> Result<TlsInteractionResult, Error> {
         unsafe {
             let mut error = ptr::null_mut();
-            let ret = ffi::g_tls_interaction_invoke_ask_password(self.as_ref().to_glib_none().0, password.as_ref().to_glib_none().0, cancellable.map(|p| p.as_ref()).to_glib_none().0, &mut error);
-            if error.is_null() { Ok(from_glib(ret)) } else { Err(from_glib_full(error)) }
+            let ret = gio_sys::g_tls_interaction_invoke_ask_password(
+                self.as_ref().to_glib_none().0,
+                password.as_ref().to_glib_none().0,
+                cancellable.map(|p| p.as_ref()).to_glib_none().0,
+                &mut error,
+            );
+            if error.is_null() {
+                Ok(from_glib(ret))
+            } else {
+                Err(from_glib_full(error))
+            }
         }
     }
 
-    fn invoke_request_certificate<'a, P: IsA<TlsConnection>, Q: IsA<Cancellable> + 'a, R: Into<Option<&'a Q>>>(&self, connection: &P, flags: TlsCertificateRequestFlags, cancellable: R) -> Result<TlsInteractionResult, Error> {
-        let cancellable = cancellable.into();
+    fn invoke_request_certificate<P: IsA<TlsConnection>, Q: IsA<Cancellable>>(
+        &self,
+        connection: &P,
+        flags: TlsCertificateRequestFlags,
+        cancellable: Option<&Q>,
+    ) -> Result<TlsInteractionResult, Error> {
         unsafe {
             let mut error = ptr::null_mut();
-            let ret = ffi::g_tls_interaction_invoke_request_certificate(self.as_ref().to_glib_none().0, connection.as_ref().to_glib_none().0, flags.to_glib(), cancellable.map(|p| p.as_ref()).to_glib_none().0, &mut error);
-            if error.is_null() { Ok(from_glib(ret)) } else { Err(from_glib_full(error)) }
+            let ret = gio_sys::g_tls_interaction_invoke_request_certificate(
+                self.as_ref().to_glib_none().0,
+                connection.as_ref().to_glib_none().0,
+                flags.to_glib(),
+                cancellable.map(|p| p.as_ref()).to_glib_none().0,
+                &mut error,
+            );
+            if error.is_null() {
+                Ok(from_glib(ret))
+            } else {
+                Err(from_glib_full(error))
+            }
         }
     }
 
-    fn request_certificate<'a, P: IsA<TlsConnection>, Q: IsA<Cancellable> + 'a, R: Into<Option<&'a Q>>>(&self, connection: &P, flags: TlsCertificateRequestFlags, cancellable: R) -> Result<TlsInteractionResult, Error> {
-        let cancellable = cancellable.into();
+    fn request_certificate<P: IsA<TlsConnection>, Q: IsA<Cancellable>>(
+        &self,
+        connection: &P,
+        flags: TlsCertificateRequestFlags,
+        cancellable: Option<&Q>,
+    ) -> Result<TlsInteractionResult, Error> {
         unsafe {
             let mut error = ptr::null_mut();
-            let ret = ffi::g_tls_interaction_request_certificate(self.as_ref().to_glib_none().0, connection.as_ref().to_glib_none().0, flags.to_glib(), cancellable.map(|p| p.as_ref()).to_glib_none().0, &mut error);
-            if error.is_null() { Ok(from_glib(ret)) } else { Err(from_glib_full(error)) }
+            let ret = gio_sys::g_tls_interaction_request_certificate(
+                self.as_ref().to_glib_none().0,
+                connection.as_ref().to_glib_none().0,
+                flags.to_glib(),
+                cancellable.map(|p| p.as_ref()).to_glib_none().0,
+                &mut error,
+            );
+            if error.is_null() {
+                Ok(from_glib(ret))
+            } else {
+                Err(from_glib_full(error))
+            }
         }
     }
 
-    fn request_certificate_async<'a, P: IsA<TlsConnection>, Q: IsA<Cancellable> + 'a, R: Into<Option<&'a Q>>, S: FnOnce(Result<TlsInteractionResult, Error>) + Send + 'static>(&self, connection: &P, flags: TlsCertificateRequestFlags, cancellable: R, callback: S) {
-        let cancellable = cancellable.into();
-        let user_data: Box<S> = Box::new(callback);
-        unsafe extern "C" fn request_certificate_async_trampoline<S: FnOnce(Result<TlsInteractionResult, Error>) + Send + 'static>(_source_object: *mut gobject_ffi::GObject, res: *mut ffi::GAsyncResult, user_data: glib_ffi::gpointer) {
+    fn request_certificate_async<
+        P: IsA<TlsConnection>,
+        Q: IsA<Cancellable>,
+        R: FnOnce(Result<TlsInteractionResult, Error>) + Send + 'static,
+    >(
+        &self,
+        connection: &P,
+        flags: TlsCertificateRequestFlags,
+        cancellable: Option<&Q>,
+        callback: R,
+    ) {
+        let user_data: Box<R> = Box::new(callback);
+        unsafe extern "C" fn request_certificate_async_trampoline<
+            R: FnOnce(Result<TlsInteractionResult, Error>) + Send + 'static,
+        >(
+            _source_object: *mut gobject_sys::GObject,
+            res: *mut gio_sys::GAsyncResult,
+            user_data: glib_sys::gpointer,
+        ) {
             let mut error = ptr::null_mut();
-            let ret = ffi::g_tls_interaction_request_certificate_finish(_source_object as *mut _, res, &mut error);
-            let result = if error.is_null() { Ok(from_glib(ret)) } else { Err(from_glib_full(error)) };
-            let callback: Box<S> = Box::from_raw(user_data as *mut _);
+            let ret = gio_sys::g_tls_interaction_request_certificate_finish(
+                _source_object as *mut _,
+                res,
+                &mut error,
+            );
+            let result = if error.is_null() {
+                Ok(from_glib(ret))
+            } else {
+                Err(from_glib_full(error))
+            };
+            let callback: Box<R> = Box::from_raw(user_data as *mut _);
             callback(result);
         }
-        let callback = request_certificate_async_trampoline::<S>;
+        let callback = request_certificate_async_trampoline::<R>;
         unsafe {
-            ffi::g_tls_interaction_request_certificate_async(self.as_ref().to_glib_none().0, connection.as_ref().to_glib_none().0, flags.to_glib(), cancellable.map(|p| p.as_ref()).to_glib_none().0, Some(callback), Box::into_raw(user_data) as *mut _);
+            gio_sys::g_tls_interaction_request_certificate_async(
+                self.as_ref().to_glib_none().0,
+                connection.as_ref().to_glib_none().0,
+                flags.to_glib(),
+                cancellable.map(|p| p.as_ref()).to_glib_none().0,
+                Some(callback),
+                Box::into_raw(user_data) as *mut _,
+            );
         }
     }
 
     #[cfg(feature = "futures")]
-    fn request_certificate_async_future<P: IsA<TlsConnection> + Clone + 'static>(&self, connection: &P, flags: TlsCertificateRequestFlags) -> Box_<futures_core::Future<Item = (Self, TlsInteractionResult), Error = (Self, Error)>> where Self: Sized + Clone {
-        use GioFuture;
+    fn request_certificate_async_future<P: IsA<TlsConnection> + Clone + 'static>(
+        &self,
+        connection: &P,
+        flags: TlsCertificateRequestFlags,
+    ) -> Box_<dyn future::Future<Output = Result<TlsInteractionResult, Error>> + std::marker::Unpin>
+    {
         use fragile::Fragile;
+        use GioFuture;
 
         let connection = connection.clone();
         GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
             let send = Fragile::new(send);
-            let obj_clone = Fragile::new(obj.clone());
-            obj.request_certificate_async(
-                 &connection,
-                 flags,
-                 Some(&cancellable),
-                 move |res| {
-                     let obj = obj_clone.into_inner();
-                     let res = res.map(|v| (obj.clone(), v)).map_err(|v| (obj.clone(), v));
-                     let _ = send.into_inner().send(res);
-                 },
-            );
+            obj.request_certificate_async(&connection, flags, Some(&cancellable), move |res| {
+                let _ = send.into_inner().send(res);
+            });
 
             cancellable
         })

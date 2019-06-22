@@ -2,85 +2,105 @@
 // from gir-files (https://github.com/gtk-rs/gir-files)
 // DO NOT EDIT
 
-use Icon;
-use NotificationPriority;
-use ffi;
+use gio_sys;
 use glib;
 use glib::object::IsA;
 use glib::translate::*;
 use std::fmt;
+use Icon;
+use NotificationPriority;
 
 glib_wrapper! {
-    pub struct Notification(Object<ffi::GNotification, NotificationClass>);
+    pub struct Notification(Object<gio_sys::GNotification, NotificationClass>);
 
     match fn {
-        get_type => || ffi::g_notification_get_type(),
+        get_type => || gio_sys::g_notification_get_type(),
     }
 }
 
 impl Notification {
     pub fn new(title: &str) -> Notification {
-        unsafe {
-            from_glib_full(ffi::g_notification_new(title.to_glib_none().0))
-        }
+        unsafe { from_glib_full(gio_sys::g_notification_new(title.to_glib_none().0)) }
     }
 
     pub fn add_button(&self, label: &str, detailed_action: &str) {
         unsafe {
-            ffi::g_notification_add_button(self.to_glib_none().0, label.to_glib_none().0, detailed_action.to_glib_none().0);
+            gio_sys::g_notification_add_button(
+                self.to_glib_none().0,
+                label.to_glib_none().0,
+                detailed_action.to_glib_none().0,
+            );
         }
     }
 
-    //pub fn add_button_with_target<'a, P: Into<Option<&'a str>>>(&self, label: &str, action: &str, target_format: P, : /*Unknown conversion*//*Unimplemented*/Fundamental: VarArgs) {
-    //    unsafe { TODO: call ffi::g_notification_add_button_with_target() }
+    //pub fn add_button_with_target(&self, label: &str, action: &str, target_format: Option<&str>, : /*Unknown conversion*//*Unimplemented*/Fundamental: VarArgs) {
+    //    unsafe { TODO: call gio_sys:g_notification_add_button_with_target() }
     //}
 
-    pub fn add_button_with_target_value<'a, P: Into<Option<&'a glib::Variant>>>(&self, label: &str, action: &str, target: P) {
-        let target = target.into();
+    pub fn add_button_with_target_value(
+        &self,
+        label: &str,
+        action: &str,
+        target: Option<&glib::Variant>,
+    ) {
         unsafe {
-            ffi::g_notification_add_button_with_target_value(self.to_glib_none().0, label.to_glib_none().0, action.to_glib_none().0, target.to_glib_none().0);
+            gio_sys::g_notification_add_button_with_target_value(
+                self.to_glib_none().0,
+                label.to_glib_none().0,
+                action.to_glib_none().0,
+                target.to_glib_none().0,
+            );
         }
     }
 
-    pub fn set_body<'a, P: Into<Option<&'a str>>>(&self, body: P) {
-        let body = body.into();
+    pub fn set_body(&self, body: Option<&str>) {
         unsafe {
-            ffi::g_notification_set_body(self.to_glib_none().0, body.to_glib_none().0);
+            gio_sys::g_notification_set_body(self.to_glib_none().0, body.to_glib_none().0);
         }
     }
 
     pub fn set_default_action(&self, detailed_action: &str) {
         unsafe {
-            ffi::g_notification_set_default_action(self.to_glib_none().0, detailed_action.to_glib_none().0);
+            gio_sys::g_notification_set_default_action(
+                self.to_glib_none().0,
+                detailed_action.to_glib_none().0,
+            );
         }
     }
 
-    //pub fn set_default_action_and_target<'a, P: Into<Option<&'a str>>>(&self, action: &str, target_format: P, : /*Unknown conversion*//*Unimplemented*/Fundamental: VarArgs) {
-    //    unsafe { TODO: call ffi::g_notification_set_default_action_and_target() }
+    //pub fn set_default_action_and_target(&self, action: &str, target_format: Option<&str>, : /*Unknown conversion*//*Unimplemented*/Fundamental: VarArgs) {
+    //    unsafe { TODO: call gio_sys:g_notification_set_default_action_and_target() }
     //}
 
-    pub fn set_default_action_and_target_value<'a, P: Into<Option<&'a glib::Variant>>>(&self, action: &str, target: P) {
-        let target = target.into();
+    pub fn set_default_action_and_target_value(
+        &self,
+        action: &str,
+        target: Option<&glib::Variant>,
+    ) {
         unsafe {
-            ffi::g_notification_set_default_action_and_target_value(self.to_glib_none().0, action.to_glib_none().0, target.to_glib_none().0);
+            gio_sys::g_notification_set_default_action_and_target_value(
+                self.to_glib_none().0,
+                action.to_glib_none().0,
+                target.to_glib_none().0,
+            );
         }
     }
 
     pub fn set_icon<P: IsA<Icon>>(&self, icon: &P) {
         unsafe {
-            ffi::g_notification_set_icon(self.to_glib_none().0, icon.as_ref().to_glib_none().0);
+            gio_sys::g_notification_set_icon(self.to_glib_none().0, icon.as_ref().to_glib_none().0);
         }
     }
 
     pub fn set_priority(&self, priority: NotificationPriority) {
         unsafe {
-            ffi::g_notification_set_priority(self.to_glib_none().0, priority.to_glib());
+            gio_sys::g_notification_set_priority(self.to_glib_none().0, priority.to_glib());
         }
     }
 
     pub fn set_title(&self, title: &str) {
         unsafe {
-            ffi::g_notification_set_title(self.to_glib_none().0, title.to_glib_none().0);
+            gio_sys::g_notification_set_title(self.to_glib_none().0, title.to_glib_none().0);
         }
     }
 }

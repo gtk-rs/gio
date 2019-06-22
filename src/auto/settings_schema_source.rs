@@ -2,32 +2,44 @@
 // from gir-files (https://github.com/gtk-rs/gir-files)
 // DO NOT EDIT
 
-use Error;
-use SettingsSchema;
-use ffi;
-use glib::GString;
+use gio_sys;
 use glib::translate::*;
+use glib::GString;
 use std;
 use std::ptr;
+use Error;
+use SettingsSchema;
 
 glib_wrapper! {
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    pub struct SettingsSchemaSource(Shared<ffi::GSettingsSchemaSource>);
+    pub struct SettingsSchemaSource(Shared<gio_sys::GSettingsSchemaSource>);
 
     match fn {
-        ref => |ptr| ffi::g_settings_schema_source_ref(ptr),
-        unref => |ptr| ffi::g_settings_schema_source_unref(ptr),
-        get_type => || ffi::g_settings_schema_source_get_type(),
+        ref => |ptr| gio_sys::g_settings_schema_source_ref(ptr),
+        unref => |ptr| gio_sys::g_settings_schema_source_unref(ptr),
+        get_type => || gio_sys::g_settings_schema_source_get_type(),
     }
 }
 
 impl SettingsSchemaSource {
-    pub fn new_from_directory<'a, P: AsRef<std::path::Path>, Q: Into<Option<&'a SettingsSchemaSource>>>(directory: P, parent: Q, trusted: bool) -> Result<SettingsSchemaSource, Error> {
-        let parent = parent.into();
+    pub fn new_from_directory<P: AsRef<std::path::Path>>(
+        directory: P,
+        parent: Option<&SettingsSchemaSource>,
+        trusted: bool,
+    ) -> Result<SettingsSchemaSource, Error> {
         unsafe {
             let mut error = ptr::null_mut();
-            let ret = ffi::g_settings_schema_source_new_from_directory(directory.as_ref().to_glib_none().0, parent.to_glib_none().0, trusted.to_glib(), &mut error);
-            if error.is_null() { Ok(from_glib_full(ret)) } else { Err(from_glib_full(error)) }
+            let ret = gio_sys::g_settings_schema_source_new_from_directory(
+                directory.as_ref().to_glib_none().0,
+                parent.to_glib_none().0,
+                trusted.to_glib(),
+                &mut error,
+            );
+            if error.is_null() {
+                Ok(from_glib_full(ret))
+            } else {
+                Err(from_glib_full(error))
+            }
         }
     }
 
@@ -35,20 +47,30 @@ impl SettingsSchemaSource {
         unsafe {
             let mut non_relocatable = ptr::null_mut();
             let mut relocatable = ptr::null_mut();
-            ffi::g_settings_schema_source_list_schemas(self.to_glib_none().0, recursive.to_glib(), &mut non_relocatable, &mut relocatable);
-            (FromGlibPtrContainer::from_glib_full(non_relocatable), FromGlibPtrContainer::from_glib_full(relocatable))
+            gio_sys::g_settings_schema_source_list_schemas(
+                self.to_glib_none().0,
+                recursive.to_glib(),
+                &mut non_relocatable,
+                &mut relocatable,
+            );
+            (
+                FromGlibPtrContainer::from_glib_full(non_relocatable),
+                FromGlibPtrContainer::from_glib_full(relocatable),
+            )
         }
     }
 
     pub fn lookup(&self, schema_id: &str, recursive: bool) -> Option<SettingsSchema> {
         unsafe {
-            from_glib_full(ffi::g_settings_schema_source_lookup(self.to_glib_none().0, schema_id.to_glib_none().0, recursive.to_glib()))
+            from_glib_full(gio_sys::g_settings_schema_source_lookup(
+                self.to_glib_none().0,
+                schema_id.to_glib_none().0,
+                recursive.to_glib(),
+            ))
         }
     }
 
     pub fn get_default() -> Option<SettingsSchemaSource> {
-        unsafe {
-            from_glib_none(ffi::g_settings_schema_source_get_default())
-        }
+        unsafe { from_glib_none(gio_sys::g_settings_schema_source_get_default()) }
     }
 }
