@@ -15,7 +15,6 @@ use glib::Value;
 use glib_sys;
 use gobject_sys;
 use libc;
-use signal::Inhibit;
 use std::boxed::Box as Box_;
 use std::fmt;
 use std::mem::transmute;
@@ -157,12 +156,13 @@ pub trait SettingsExt: 'static {
 
     fn get_user_value(&self, key: &str) -> Option<glib::Variant>;
 
-    fn get_value(&self, key: &str) -> Option<glib::Variant>;
+    fn get_value(&self, key: &str) -> glib::Variant;
 
     fn is_writable(&self, name: &str) -> bool;
 
     fn list_children(&self) -> Vec<GString>;
 
+    #[cfg_attr(feature = "v2_46", deprecated)]
     fn list_keys(&self) -> Vec<GString>;
 
     fn reset(&self, key: &str);
@@ -171,29 +171,29 @@ pub trait SettingsExt: 'static {
 
     //fn set(&self, key: &str, format: &str, : /*Unknown conversion*//*Unimplemented*/Fundamental: VarArgs) -> bool;
 
-    fn set_boolean(&self, key: &str, value: bool) -> bool;
+    fn set_boolean(&self, key: &str, value: bool) -> Result<(), glib::error::BoolError>;
 
-    fn set_double(&self, key: &str, value: f64) -> bool;
+    fn set_double(&self, key: &str, value: f64) -> Result<(), glib::error::BoolError>;
 
-    fn set_enum(&self, key: &str, value: i32) -> bool;
+    fn set_enum(&self, key: &str, value: i32) -> Result<(), glib::error::BoolError>;
 
-    fn set_flags(&self, key: &str, value: u32) -> bool;
+    fn set_flags(&self, key: &str, value: u32) -> Result<(), glib::error::BoolError>;
 
-    fn set_int(&self, key: &str, value: i32) -> bool;
-
-    #[cfg(any(feature = "v2_50", feature = "dox"))]
-    fn set_int64(&self, key: &str, value: i64) -> bool;
-
-    fn set_string(&self, key: &str, value: &str) -> bool;
-
-    fn set_strv(&self, key: &str, value: &[&str]) -> bool;
-
-    fn set_uint(&self, key: &str, value: u32) -> bool;
+    fn set_int(&self, key: &str, value: i32) -> Result<(), glib::error::BoolError>;
 
     #[cfg(any(feature = "v2_50", feature = "dox"))]
-    fn set_uint64(&self, key: &str, value: u64) -> bool;
+    fn set_int64(&self, key: &str, value: i64) -> Result<(), glib::error::BoolError>;
 
-    fn set_value(&self, key: &str, value: &glib::Variant) -> bool;
+    fn set_string(&self, key: &str, value: &str) -> Result<(), glib::error::BoolError>;
+
+    fn set_strv(&self, key: &str, value: &[&str]) -> Result<(), glib::error::BoolError>;
+
+    fn set_uint(&self, key: &str, value: u32) -> Result<(), glib::error::BoolError>;
+
+    #[cfg(any(feature = "v2_50", feature = "dox"))]
+    fn set_uint64(&self, key: &str, value: u64) -> Result<(), glib::error::BoolError>;
+
+    fn set_value(&self, key: &str, value: &glib::Variant) -> Result<(), glib::error::BoolError>;
 
     fn get_property_backend(&self) -> Option<SettingsBackend>;
 
@@ -209,7 +209,7 @@ pub trait SettingsExt: 'static {
 
     fn connect_changed<F: Fn(&Self, &str) + 'static>(&self, f: F) -> SignalHandlerId;
 
-    fn connect_writable_change_event<F: Fn(&Self, u32) -> Inhibit + 'static>(
+    fn connect_writable_change_event<F: Fn(&Self, u32) -> glib::signal::Inhibit + 'static>(
         &self,
         f: F,
     ) -> SignalHandlerId;
@@ -398,7 +398,7 @@ impl<O: IsA<Settings>> SettingsExt for O {
         }
     }
 
-    fn get_value(&self, key: &str) -> Option<glib::Variant> {
+    fn get_value(&self, key: &str) -> glib::Variant {
         unsafe {
             from_glib_full(gio_sys::g_settings_get_value(
                 self.as_ref().to_glib_none().0,
@@ -448,115 +448,148 @@ impl<O: IsA<Settings>> SettingsExt for O {
     //    unsafe { TODO: call gio_sys:g_settings_set() }
     //}
 
-    fn set_boolean(&self, key: &str, value: bool) -> bool {
+    fn set_boolean(&self, key: &str, value: bool) -> Result<(), glib::error::BoolError> {
         unsafe {
-            from_glib(gio_sys::g_settings_set_boolean(
-                self.as_ref().to_glib_none().0,
-                key.to_glib_none().0,
-                value.to_glib(),
-            ))
+            glib_result_from_gboolean!(
+                gio_sys::g_settings_set_boolean(
+                    self.as_ref().to_glib_none().0,
+                    key.to_glib_none().0,
+                    value.to_glib()
+                ),
+                "Can't set readonly key"
+            )
         }
     }
 
-    fn set_double(&self, key: &str, value: f64) -> bool {
+    fn set_double(&self, key: &str, value: f64) -> Result<(), glib::error::BoolError> {
         unsafe {
-            from_glib(gio_sys::g_settings_set_double(
-                self.as_ref().to_glib_none().0,
-                key.to_glib_none().0,
-                value,
-            ))
+            glib_result_from_gboolean!(
+                gio_sys::g_settings_set_double(
+                    self.as_ref().to_glib_none().0,
+                    key.to_glib_none().0,
+                    value
+                ),
+                "Can't set readonly key"
+            )
         }
     }
 
-    fn set_enum(&self, key: &str, value: i32) -> bool {
+    fn set_enum(&self, key: &str, value: i32) -> Result<(), glib::error::BoolError> {
         unsafe {
-            from_glib(gio_sys::g_settings_set_enum(
-                self.as_ref().to_glib_none().0,
-                key.to_glib_none().0,
-                value,
-            ))
+            glib_result_from_gboolean!(
+                gio_sys::g_settings_set_enum(
+                    self.as_ref().to_glib_none().0,
+                    key.to_glib_none().0,
+                    value
+                ),
+                "Can't set readonly key"
+            )
         }
     }
 
-    fn set_flags(&self, key: &str, value: u32) -> bool {
+    fn set_flags(&self, key: &str, value: u32) -> Result<(), glib::error::BoolError> {
         unsafe {
-            from_glib(gio_sys::g_settings_set_flags(
-                self.as_ref().to_glib_none().0,
-                key.to_glib_none().0,
-                value,
-            ))
+            glib_result_from_gboolean!(
+                gio_sys::g_settings_set_flags(
+                    self.as_ref().to_glib_none().0,
+                    key.to_glib_none().0,
+                    value
+                ),
+                "Can't set readonly key"
+            )
         }
     }
 
-    fn set_int(&self, key: &str, value: i32) -> bool {
+    fn set_int(&self, key: &str, value: i32) -> Result<(), glib::error::BoolError> {
         unsafe {
-            from_glib(gio_sys::g_settings_set_int(
-                self.as_ref().to_glib_none().0,
-                key.to_glib_none().0,
-                value,
-            ))
-        }
-    }
-
-    #[cfg(any(feature = "v2_50", feature = "dox"))]
-    fn set_int64(&self, key: &str, value: i64) -> bool {
-        unsafe {
-            from_glib(gio_sys::g_settings_set_int64(
-                self.as_ref().to_glib_none().0,
-                key.to_glib_none().0,
-                value,
-            ))
-        }
-    }
-
-    fn set_string(&self, key: &str, value: &str) -> bool {
-        unsafe {
-            from_glib(gio_sys::g_settings_set_string(
-                self.as_ref().to_glib_none().0,
-                key.to_glib_none().0,
-                value.to_glib_none().0,
-            ))
-        }
-    }
-
-    fn set_strv(&self, key: &str, value: &[&str]) -> bool {
-        unsafe {
-            from_glib(gio_sys::g_settings_set_strv(
-                self.as_ref().to_glib_none().0,
-                key.to_glib_none().0,
-                value.to_glib_none().0,
-            ))
-        }
-    }
-
-    fn set_uint(&self, key: &str, value: u32) -> bool {
-        unsafe {
-            from_glib(gio_sys::g_settings_set_uint(
-                self.as_ref().to_glib_none().0,
-                key.to_glib_none().0,
-                value,
-            ))
+            glib_result_from_gboolean!(
+                gio_sys::g_settings_set_int(
+                    self.as_ref().to_glib_none().0,
+                    key.to_glib_none().0,
+                    value
+                ),
+                "Can't set readonly key"
+            )
         }
     }
 
     #[cfg(any(feature = "v2_50", feature = "dox"))]
-    fn set_uint64(&self, key: &str, value: u64) -> bool {
+    fn set_int64(&self, key: &str, value: i64) -> Result<(), glib::error::BoolError> {
         unsafe {
-            from_glib(gio_sys::g_settings_set_uint64(
-                self.as_ref().to_glib_none().0,
-                key.to_glib_none().0,
-                value,
-            ))
+            glib_result_from_gboolean!(
+                gio_sys::g_settings_set_int64(
+                    self.as_ref().to_glib_none().0,
+                    key.to_glib_none().0,
+                    value
+                ),
+                "Can't set readonly key"
+            )
         }
     }
 
-    fn set_value(&self, key: &str, value: &glib::Variant) -> bool {
+    fn set_string(&self, key: &str, value: &str) -> Result<(), glib::error::BoolError> {
         unsafe {
-            from_glib(gio_sys::g_settings_set_value(
-                self.as_ref().to_glib_none().0,
-                key.to_glib_none().0,
-                value.to_glib_none().0,
-            ))
+            glib_result_from_gboolean!(
+                gio_sys::g_settings_set_string(
+                    self.as_ref().to_glib_none().0,
+                    key.to_glib_none().0,
+                    value.to_glib_none().0
+                ),
+                "Can't set readonly key"
+            )
+        }
+    }
+
+    fn set_strv(&self, key: &str, value: &[&str]) -> Result<(), glib::error::BoolError> {
+        unsafe {
+            glib_result_from_gboolean!(
+                gio_sys::g_settings_set_strv(
+                    self.as_ref().to_glib_none().0,
+                    key.to_glib_none().0,
+                    value.to_glib_none().0
+                ),
+                "Can't set readonly key"
+            )
+        }
+    }
+
+    fn set_uint(&self, key: &str, value: u32) -> Result<(), glib::error::BoolError> {
+        unsafe {
+            glib_result_from_gboolean!(
+                gio_sys::g_settings_set_uint(
+                    self.as_ref().to_glib_none().0,
+                    key.to_glib_none().0,
+                    value
+                ),
+                "Can't set readonly key"
+            )
+        }
+    }
+
+    #[cfg(any(feature = "v2_50", feature = "dox"))]
+    fn set_uint64(&self, key: &str, value: u64) -> Result<(), glib::error::BoolError> {
+        unsafe {
+            glib_result_from_gboolean!(
+                gio_sys::g_settings_set_uint64(
+                    self.as_ref().to_glib_none().0,
+                    key.to_glib_none().0,
+                    value
+                ),
+                "Can't set readonly key"
+            )
+        }
+    }
+
+    fn set_value(&self, key: &str, value: &glib::Variant) -> Result<(), glib::error::BoolError> {
+        unsafe {
+            glib_result_from_gboolean!(
+                gio_sys::g_settings_set_value(
+                    self.as_ref().to_glib_none().0,
+                    key.to_glib_none().0,
+                    value.to_glib_none().0
+                ),
+                "Can't set readonly key"
+            )
         }
     }
 
@@ -568,7 +601,9 @@ impl<O: IsA<Settings>> SettingsExt for O {
                 b"backend\0".as_ptr() as *const _,
                 value.to_glib_none_mut().0,
             );
-            value.get()
+            value
+                .get()
+                .expect("Return Value for property `backend` getter")
         }
     }
 
@@ -580,7 +615,10 @@ impl<O: IsA<Settings>> SettingsExt for O {
                 b"delay-apply\0".as_ptr() as *const _,
                 value.to_glib_none_mut().0,
             );
-            value.get().unwrap()
+            value
+                .get()
+                .expect("Return Value for property `delay-apply` getter")
+                .unwrap()
         }
     }
 
@@ -592,7 +630,9 @@ impl<O: IsA<Settings>> SettingsExt for O {
                 b"path\0".as_ptr() as *const _,
                 value.to_glib_none_mut().0,
             );
-            value.get()
+            value
+                .get()
+                .expect("Return Value for property `path` getter")
         }
     }
 
@@ -604,7 +644,9 @@ impl<O: IsA<Settings>> SettingsExt for O {
                 b"schema-id\0".as_ptr() as *const _,
                 value.to_glib_none_mut().0,
             );
-            value.get()
+            value
+                .get()
+                .expect("Return Value for property `schema-id` getter")
         }
     }
 
@@ -616,7 +658,9 @@ impl<O: IsA<Settings>> SettingsExt for O {
                 b"settings-schema\0".as_ptr() as *const _,
                 value.to_glib_none_mut().0,
             );
-            value.get()
+            value
+                .get()
+                .expect("Return Value for property `settings-schema` getter")
         }
     }
 
@@ -649,13 +693,13 @@ impl<O: IsA<Settings>> SettingsExt for O {
         }
     }
 
-    fn connect_writable_change_event<F: Fn(&Self, u32) -> Inhibit + 'static>(
+    fn connect_writable_change_event<F: Fn(&Self, u32) -> glib::signal::Inhibit + 'static>(
         &self,
         f: F,
     ) -> SignalHandlerId {
         unsafe extern "C" fn writable_change_event_trampoline<
             P,
-            F: Fn(&P, u32) -> Inhibit + 'static,
+            F: Fn(&P, u32) -> glib::signal::Inhibit + 'static,
         >(
             this: *mut gio_sys::GSettings,
             key: libc::c_uint,

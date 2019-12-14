@@ -2,9 +2,8 @@
 // from gir-files (https://github.com/gtk-rs/gir-files)
 // DO NOT EDIT
 
-#[cfg(feature = "futures")]
-use futures::future;
 use gio_sys;
+use glib;
 use glib::object::Cast;
 use glib::object::IsA;
 use glib::signal::connect_raw;
@@ -16,10 +15,10 @@ use gobject_sys;
 use std::boxed::Box as Box_;
 use std::fmt;
 use std::mem::transmute;
+use std::pin::Pin;
 use std::ptr;
 use Cancellable;
 use Drive;
-use Error;
 use File;
 use Icon;
 use Mount;
@@ -45,7 +44,7 @@ pub trait VolumeExt: 'static {
     fn eject_with_operation<
         P: IsA<MountOperation>,
         Q: IsA<Cancellable>,
-        R: FnOnce(Result<(), Error>) + Send + 'static,
+        R: FnOnce(Result<(), glib::Error>) + Send + 'static,
     >(
         &self,
         flags: MountUnmountFlags,
@@ -54,12 +53,11 @@ pub trait VolumeExt: 'static {
         callback: R,
     );
 
-    #[cfg(feature = "futures")]
     fn eject_with_operation_future<P: IsA<MountOperation> + Clone + 'static>(
         &self,
         flags: MountUnmountFlags,
         mount_operation: Option<&P>,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin>;
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>>;
 
     fn enumerate_identifiers(&self) -> Vec<GString>;
 
@@ -84,7 +82,7 @@ pub trait VolumeExt: 'static {
     fn mount<
         P: IsA<MountOperation>,
         Q: IsA<Cancellable>,
-        R: FnOnce(Result<(), Error>) + Send + 'static,
+        R: FnOnce(Result<(), glib::Error>) + Send + 'static,
     >(
         &self,
         flags: MountMountFlags,
@@ -93,12 +91,11 @@ pub trait VolumeExt: 'static {
         callback: R,
     );
 
-    #[cfg(feature = "futures")]
     fn mount_future<P: IsA<MountOperation> + Clone + 'static>(
         &self,
         flags: MountMountFlags,
         mount_operation: Option<&P>,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin>;
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>>;
 
     fn should_automount(&self) -> bool;
 
@@ -119,7 +116,7 @@ impl<O: IsA<Volume>> VolumeExt for O {
     fn eject_with_operation<
         P: IsA<MountOperation>,
         Q: IsA<Cancellable>,
-        R: FnOnce(Result<(), Error>) + Send + 'static,
+        R: FnOnce(Result<(), glib::Error>) + Send + 'static,
     >(
         &self,
         flags: MountUnmountFlags,
@@ -127,9 +124,9 @@ impl<O: IsA<Volume>> VolumeExt for O {
         cancellable: Option<&Q>,
         callback: R,
     ) {
-        let user_data: Box<R> = Box::new(callback);
+        let user_data: Box_<R> = Box_::new(callback);
         unsafe extern "C" fn eject_with_operation_trampoline<
-            R: FnOnce(Result<(), Error>) + Send + 'static,
+            R: FnOnce(Result<(), glib::Error>) + Send + 'static,
         >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
@@ -146,7 +143,7 @@ impl<O: IsA<Volume>> VolumeExt for O {
             } else {
                 Err(from_glib_full(error))
             };
-            let callback: Box<R> = Box::from_raw(user_data as *mut _);
+            let callback: Box_<R> = Box_::from_raw(user_data as *mut _);
             callback(result);
         }
         let callback = eject_with_operation_trampoline::<R>;
@@ -157,35 +154,30 @@ impl<O: IsA<Volume>> VolumeExt for O {
                 mount_operation.map(|p| p.as_ref()).to_glib_none().0,
                 cancellable.map(|p| p.as_ref()).to_glib_none().0,
                 Some(callback),
-                Box::into_raw(user_data) as *mut _,
+                Box_::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     fn eject_with_operation_future<P: IsA<MountOperation> + Clone + 'static>(
         &self,
         flags: MountUnmountFlags,
         mount_operation: Option<&P>,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin> {
-        use fragile::Fragile;
-        use GioFuture;
-
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>> {
         let mount_operation = mount_operation.map(ToOwned::to_owned);
-        GioFuture::new(self, move |obj, send| {
+        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             obj.eject_with_operation(
                 flags,
                 mount_operation.as_ref().map(::std::borrow::Borrow::borrow),
                 Some(&cancellable),
                 move |res| {
-                    let _ = send.into_inner().send(res);
+                    send.resolve(res);
                 },
             );
 
             cancellable
-        })
+        }))
     }
 
     fn enumerate_identifiers(&self) -> Vec<GString> {
@@ -252,7 +244,7 @@ impl<O: IsA<Volume>> VolumeExt for O {
     fn mount<
         P: IsA<MountOperation>,
         Q: IsA<Cancellable>,
-        R: FnOnce(Result<(), Error>) + Send + 'static,
+        R: FnOnce(Result<(), glib::Error>) + Send + 'static,
     >(
         &self,
         flags: MountMountFlags,
@@ -260,8 +252,10 @@ impl<O: IsA<Volume>> VolumeExt for O {
         cancellable: Option<&Q>,
         callback: R,
     ) {
-        let user_data: Box<R> = Box::new(callback);
-        unsafe extern "C" fn mount_trampoline<R: FnOnce(Result<(), Error>) + Send + 'static>(
+        let user_data: Box_<R> = Box_::new(callback);
+        unsafe extern "C" fn mount_trampoline<
+            R: FnOnce(Result<(), glib::Error>) + Send + 'static,
+        >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
             user_data: glib_sys::gpointer,
@@ -273,7 +267,7 @@ impl<O: IsA<Volume>> VolumeExt for O {
             } else {
                 Err(from_glib_full(error))
             };
-            let callback: Box<R> = Box::from_raw(user_data as *mut _);
+            let callback: Box_<R> = Box_::from_raw(user_data as *mut _);
             callback(result);
         }
         let callback = mount_trampoline::<R>;
@@ -284,35 +278,30 @@ impl<O: IsA<Volume>> VolumeExt for O {
                 mount_operation.map(|p| p.as_ref()).to_glib_none().0,
                 cancellable.map(|p| p.as_ref()).to_glib_none().0,
                 Some(callback),
-                Box::into_raw(user_data) as *mut _,
+                Box_::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     fn mount_future<P: IsA<MountOperation> + Clone + 'static>(
         &self,
         flags: MountMountFlags,
         mount_operation: Option<&P>,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin> {
-        use fragile::Fragile;
-        use GioFuture;
-
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>> {
         let mount_operation = mount_operation.map(ToOwned::to_owned);
-        GioFuture::new(self, move |obj, send| {
+        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             obj.mount(
                 flags,
                 mount_operation.as_ref().map(::std::borrow::Borrow::borrow),
                 Some(&cancellable),
                 move |res| {
-                    let _ = send.into_inner().send(res);
+                    send.resolve(res);
                 },
             );
 
             cancellable
-        })
+        }))
     }
 
     fn should_automount(&self) -> bool {

@@ -2,8 +2,6 @@
 // from gir-files (https://github.com/gtk-rs/gir-files)
 // DO NOT EDIT
 
-#[cfg(feature = "futures")]
-use futures::future;
 use gio_sys;
 use glib;
 use glib::object::IsA;
@@ -11,12 +9,11 @@ use glib::translate::*;
 use glib::GString;
 use glib_sys;
 use gobject_sys;
-#[cfg(feature = "futures")]
 use std::boxed::Box as Box_;
 use std::fmt;
+use std::pin::Pin;
 use std::ptr;
 use Cancellable;
-use Error;
 use FileInfo;
 use IOStream;
 use Seekable;
@@ -38,9 +35,12 @@ pub trait FileIOStreamExt: 'static {
         &self,
         attributes: &str,
         cancellable: Option<&P>,
-    ) -> Result<FileInfo, Error>;
+    ) -> Result<FileInfo, glib::Error>;
 
-    fn query_info_async<P: IsA<Cancellable>, Q: FnOnce(Result<FileInfo, Error>) + Send + 'static>(
+    fn query_info_async<
+        P: IsA<Cancellable>,
+        Q: FnOnce(Result<FileInfo, glib::Error>) + Send + 'static,
+    >(
         &self,
         attributes: &str,
         io_priority: glib::Priority,
@@ -48,12 +48,11 @@ pub trait FileIOStreamExt: 'static {
         callback: Q,
     );
 
-    #[cfg(feature = "futures")]
     fn query_info_async_future(
         &self,
         attributes: &str,
         io_priority: glib::Priority,
-    ) -> Box_<dyn future::Future<Output = Result<FileInfo, Error>> + std::marker::Unpin>;
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<FileInfo, glib::Error>> + 'static>>;
 }
 
 impl<O: IsA<FileIOStream>> FileIOStreamExt for O {
@@ -69,7 +68,7 @@ impl<O: IsA<FileIOStream>> FileIOStreamExt for O {
         &self,
         attributes: &str,
         cancellable: Option<&P>,
-    ) -> Result<FileInfo, Error> {
+    ) -> Result<FileInfo, glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let ret = gio_sys::g_file_io_stream_query_info(
@@ -88,7 +87,7 @@ impl<O: IsA<FileIOStream>> FileIOStreamExt for O {
 
     fn query_info_async<
         P: IsA<Cancellable>,
-        Q: FnOnce(Result<FileInfo, Error>) + Send + 'static,
+        Q: FnOnce(Result<FileInfo, glib::Error>) + Send + 'static,
     >(
         &self,
         attributes: &str,
@@ -96,9 +95,9 @@ impl<O: IsA<FileIOStream>> FileIOStreamExt for O {
         cancellable: Option<&P>,
         callback: Q,
     ) {
-        let user_data: Box<Q> = Box::new(callback);
+        let user_data: Box_<Q> = Box_::new(callback);
         unsafe extern "C" fn query_info_async_trampoline<
-            Q: FnOnce(Result<FileInfo, Error>) + Send + 'static,
+            Q: FnOnce(Result<FileInfo, glib::Error>) + Send + 'static,
         >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
@@ -115,7 +114,7 @@ impl<O: IsA<FileIOStream>> FileIOStreamExt for O {
             } else {
                 Err(from_glib_full(error))
             };
-            let callback: Box<Q> = Box::from_raw(user_data as *mut _);
+            let callback: Box_<Q> = Box_::from_raw(user_data as *mut _);
             callback(result);
         }
         let callback = query_info_async_trampoline::<Q>;
@@ -126,30 +125,25 @@ impl<O: IsA<FileIOStream>> FileIOStreamExt for O {
                 io_priority.to_glib(),
                 cancellable.map(|p| p.as_ref()).to_glib_none().0,
                 Some(callback),
-                Box::into_raw(user_data) as *mut _,
+                Box_::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     fn query_info_async_future(
         &self,
         attributes: &str,
         io_priority: glib::Priority,
-    ) -> Box_<dyn future::Future<Output = Result<FileInfo, Error>> + std::marker::Unpin> {
-        use fragile::Fragile;
-        use GioFuture;
-
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<FileInfo, glib::Error>> + 'static>> {
         let attributes = String::from(attributes);
-        GioFuture::new(self, move |obj, send| {
+        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             obj.query_info_async(&attributes, io_priority, Some(&cancellable), move |res| {
-                let _ = send.into_inner().send(res);
+                send.resolve(res);
             });
 
             cancellable
-        })
+        }))
     }
 }
 

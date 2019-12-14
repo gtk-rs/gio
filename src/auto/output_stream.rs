@@ -2,20 +2,17 @@
 // from gir-files (https://github.com/gtk-rs/gir-files)
 // DO NOT EDIT
 
-#[cfg(feature = "futures")]
-use futures::future;
 use gio_sys;
 use glib;
 use glib::object::IsA;
 use glib::translate::*;
 use glib_sys;
 use gobject_sys;
-#[cfg(feature = "futures")]
 use std::boxed::Box as Box_;
 use std::fmt;
+use std::pin::Pin;
 use std::ptr;
 use Cancellable;
-use Error;
 use InputStream;
 use OutputStreamSpliceFlags;
 
@@ -32,35 +29,33 @@ pub const NONE_OUTPUT_STREAM: Option<&OutputStream> = None;
 pub trait OutputStreamExt: 'static {
     fn clear_pending(&self);
 
-    fn close<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), Error>;
+    fn close<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), glib::Error>;
 
-    fn close_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), Error>) + Send + 'static>(
+    fn close_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), glib::Error>) + Send + 'static>(
         &self,
         io_priority: glib::Priority,
         cancellable: Option<&P>,
         callback: Q,
     );
 
-    #[cfg(feature = "futures")]
     fn close_async_future(
         &self,
         io_priority: glib::Priority,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin>;
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>>;
 
-    fn flush<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), Error>;
+    fn flush<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), glib::Error>;
 
-    fn flush_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), Error>) + Send + 'static>(
+    fn flush_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), glib::Error>) + Send + 'static>(
         &self,
         io_priority: glib::Priority,
         cancellable: Option<&P>,
         callback: Q,
     );
 
-    #[cfg(feature = "futures")]
     fn flush_async_future(
         &self,
         io_priority: glib::Priority,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin>;
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>>;
 
     fn has_pending(&self) -> bool;
 
@@ -68,21 +63,21 @@ pub trait OutputStreamExt: 'static {
 
     fn is_closing(&self) -> bool;
 
-    //fn printf<P: IsA<Cancellable>>(&self, cancellable: Option<&P>, error: &mut Error, format: &str, : /*Unknown conversion*//*Unimplemented*/Fundamental: VarArgs) -> Option<usize>;
+    //fn printf<P: IsA<Cancellable>>(&self, cancellable: Option<&P>, error: &mut glib::Error, format: &str, : /*Unknown conversion*//*Unimplemented*/Fundamental: VarArgs) -> Option<usize>;
 
-    fn set_pending(&self) -> Result<(), Error>;
+    fn set_pending(&self) -> Result<(), glib::Error>;
 
     fn splice<P: IsA<InputStream>, Q: IsA<Cancellable>>(
         &self,
         source: &P,
         flags: OutputStreamSpliceFlags,
         cancellable: Option<&Q>,
-    ) -> Result<isize, Error>;
+    ) -> Result<isize, glib::Error>;
 
     fn splice_async<
         P: IsA<InputStream>,
         Q: IsA<Cancellable>,
-        R: FnOnce(Result<isize, Error>) + Send + 'static,
+        R: FnOnce(Result<isize, glib::Error>) + Send + 'static,
     >(
         &self,
         source: &P,
@@ -92,29 +87,31 @@ pub trait OutputStreamExt: 'static {
         callback: R,
     );
 
-    #[cfg(feature = "futures")]
     fn splice_async_future<P: IsA<InputStream> + Clone + 'static>(
         &self,
         source: &P,
         flags: OutputStreamSpliceFlags,
         io_priority: glib::Priority,
-    ) -> Box_<dyn future::Future<Output = Result<isize, Error>> + std::marker::Unpin>;
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<isize, glib::Error>> + 'static>>;
 
-    //fn vprintf<P: IsA<Cancellable>>(&self, cancellable: Option<&P>, error: &mut Error, format: &str, args: /*Unknown conversion*//*Unimplemented*/Unsupported) -> Option<usize>;
+    //fn vprintf<P: IsA<Cancellable>>(&self, cancellable: Option<&P>, error: &mut glib::Error, format: &str, args: /*Unknown conversion*//*Unimplemented*/Unsupported) -> Option<usize>;
 
     fn write<P: IsA<Cancellable>>(
         &self,
         buffer: &[u8],
         cancellable: Option<&P>,
-    ) -> Result<isize, Error>;
+    ) -> Result<isize, glib::Error>;
 
     fn write_bytes<P: IsA<Cancellable>>(
         &self,
         bytes: &glib::Bytes,
         cancellable: Option<&P>,
-    ) -> Result<isize, Error>;
+    ) -> Result<isize, glib::Error>;
 
-    fn write_bytes_async<P: IsA<Cancellable>, Q: FnOnce(Result<isize, Error>) + Send + 'static>(
+    fn write_bytes_async<
+        P: IsA<Cancellable>,
+        Q: FnOnce(Result<isize, glib::Error>) + Send + 'static,
+    >(
         &self,
         bytes: &glib::Bytes,
         io_priority: glib::Priority,
@@ -122,12 +119,31 @@ pub trait OutputStreamExt: 'static {
         callback: Q,
     );
 
-    #[cfg(feature = "futures")]
     fn write_bytes_async_future(
         &self,
         bytes: &glib::Bytes,
         io_priority: glib::Priority,
-    ) -> Box_<dyn future::Future<Output = Result<isize, Error>> + std::marker::Unpin>;
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<isize, glib::Error>> + 'static>>;
+
+    //#[cfg(any(feature = "v2_60", feature = "dox"))]
+    //fn writev<P: IsA<Cancellable>>(&self, vectors: /*Ignored*/&[&OutputVector], cancellable: Option<&P>) -> Result<usize, glib::Error>;
+
+    //#[cfg(any(feature = "v2_60", feature = "dox"))]
+    //fn writev_all<P: IsA<Cancellable>>(&self, vectors: /*Ignored*/&[&OutputVector], cancellable: Option<&P>) -> Result<usize, glib::Error>;
+
+    //#[cfg(any(feature = "v2_60", feature = "dox"))]
+    //fn writev_all_async<P: IsA<Cancellable>, Q: FnOnce(Result<usize, glib::Error>) + Send + 'static>(&self, vectors: /*Ignored*/&[&OutputVector], io_priority: glib::Priority, cancellable: Option<&P>, callback: Q);
+
+    //
+    //#[cfg(any(feature = "v2_60", feature = "dox"))]
+    //fn writev_all_async_future(&self, vectors: /*Ignored*/&[&OutputVector], io_priority: glib::Priority) -> Pin<Box_<dyn std::future::Future<Output = Result<usize, glib::Error>> + 'static>>;
+
+    //#[cfg(any(feature = "v2_60", feature = "dox"))]
+    //fn writev_async<P: IsA<Cancellable>, Q: FnOnce(Result<usize, glib::Error>) + Send + 'static>(&self, vectors: /*Ignored*/&[&OutputVector], io_priority: glib::Priority, cancellable: Option<&P>, callback: Q);
+
+    //
+    //#[cfg(any(feature = "v2_60", feature = "dox"))]
+    //fn writev_async_future(&self, vectors: /*Ignored*/&[&OutputVector], io_priority: glib::Priority) -> Pin<Box_<dyn std::future::Future<Output = Result<usize, glib::Error>> + 'static>>;
 }
 
 impl<O: IsA<OutputStream>> OutputStreamExt for O {
@@ -137,7 +153,7 @@ impl<O: IsA<OutputStream>> OutputStreamExt for O {
         }
     }
 
-    fn close<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), Error> {
+    fn close<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let _ = gio_sys::g_output_stream_close(
@@ -153,15 +169,15 @@ impl<O: IsA<OutputStream>> OutputStreamExt for O {
         }
     }
 
-    fn close_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), Error>) + Send + 'static>(
+    fn close_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), glib::Error>) + Send + 'static>(
         &self,
         io_priority: glib::Priority,
         cancellable: Option<&P>,
         callback: Q,
     ) {
-        let user_data: Box<Q> = Box::new(callback);
+        let user_data: Box_<Q> = Box_::new(callback);
         unsafe extern "C" fn close_async_trampoline<
-            Q: FnOnce(Result<(), Error>) + Send + 'static,
+            Q: FnOnce(Result<(), glib::Error>) + Send + 'static,
         >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
@@ -175,7 +191,7 @@ impl<O: IsA<OutputStream>> OutputStreamExt for O {
             } else {
                 Err(from_glib_full(error))
             };
-            let callback: Box<Q> = Box::from_raw(user_data as *mut _);
+            let callback: Box_<Q> = Box_::from_raw(user_data as *mut _);
             callback(result);
         }
         let callback = close_async_trampoline::<Q>;
@@ -185,31 +201,26 @@ impl<O: IsA<OutputStream>> OutputStreamExt for O {
                 io_priority.to_glib(),
                 cancellable.map(|p| p.as_ref()).to_glib_none().0,
                 Some(callback),
-                Box::into_raw(user_data) as *mut _,
+                Box_::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     fn close_async_future(
         &self,
         io_priority: glib::Priority,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin> {
-        use fragile::Fragile;
-        use GioFuture;
-
-        GioFuture::new(self, move |obj, send| {
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>> {
+        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             obj.close_async(io_priority, Some(&cancellable), move |res| {
-                let _ = send.into_inner().send(res);
+                send.resolve(res);
             });
 
             cancellable
-        })
+        }))
     }
 
-    fn flush<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), Error> {
+    fn flush<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let _ = gio_sys::g_output_stream_flush(
@@ -225,15 +236,15 @@ impl<O: IsA<OutputStream>> OutputStreamExt for O {
         }
     }
 
-    fn flush_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), Error>) + Send + 'static>(
+    fn flush_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), glib::Error>) + Send + 'static>(
         &self,
         io_priority: glib::Priority,
         cancellable: Option<&P>,
         callback: Q,
     ) {
-        let user_data: Box<Q> = Box::new(callback);
+        let user_data: Box_<Q> = Box_::new(callback);
         unsafe extern "C" fn flush_async_trampoline<
-            Q: FnOnce(Result<(), Error>) + Send + 'static,
+            Q: FnOnce(Result<(), glib::Error>) + Send + 'static,
         >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
@@ -247,7 +258,7 @@ impl<O: IsA<OutputStream>> OutputStreamExt for O {
             } else {
                 Err(from_glib_full(error))
             };
-            let callback: Box<Q> = Box::from_raw(user_data as *mut _);
+            let callback: Box_<Q> = Box_::from_raw(user_data as *mut _);
             callback(result);
         }
         let callback = flush_async_trampoline::<Q>;
@@ -257,28 +268,23 @@ impl<O: IsA<OutputStream>> OutputStreamExt for O {
                 io_priority.to_glib(),
                 cancellable.map(|p| p.as_ref()).to_glib_none().0,
                 Some(callback),
-                Box::into_raw(user_data) as *mut _,
+                Box_::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     fn flush_async_future(
         &self,
         io_priority: glib::Priority,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin> {
-        use fragile::Fragile;
-        use GioFuture;
-
-        GioFuture::new(self, move |obj, send| {
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>> {
+        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             obj.flush_async(io_priority, Some(&cancellable), move |res| {
-                let _ = send.into_inner().send(res);
+                send.resolve(res);
             });
 
             cancellable
-        })
+        }))
     }
 
     fn has_pending(&self) -> bool {
@@ -305,11 +311,11 @@ impl<O: IsA<OutputStream>> OutputStreamExt for O {
         }
     }
 
-    //fn printf<P: IsA<Cancellable>>(&self, cancellable: Option<&P>, error: &mut Error, format: &str, : /*Unknown conversion*//*Unimplemented*/Fundamental: VarArgs) -> Option<usize> {
+    //fn printf<P: IsA<Cancellable>>(&self, cancellable: Option<&P>, error: &mut glib::Error, format: &str, : /*Unknown conversion*//*Unimplemented*/Fundamental: VarArgs) -> Option<usize> {
     //    unsafe { TODO: call gio_sys:g_output_stream_printf() }
     //}
 
-    fn set_pending(&self) -> Result<(), Error> {
+    fn set_pending(&self) -> Result<(), glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let _ =
@@ -327,7 +333,7 @@ impl<O: IsA<OutputStream>> OutputStreamExt for O {
         source: &P,
         flags: OutputStreamSpliceFlags,
         cancellable: Option<&Q>,
-    ) -> Result<isize, Error> {
+    ) -> Result<isize, glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let ret = gio_sys::g_output_stream_splice(
@@ -348,7 +354,7 @@ impl<O: IsA<OutputStream>> OutputStreamExt for O {
     fn splice_async<
         P: IsA<InputStream>,
         Q: IsA<Cancellable>,
-        R: FnOnce(Result<isize, Error>) + Send + 'static,
+        R: FnOnce(Result<isize, glib::Error>) + Send + 'static,
     >(
         &self,
         source: &P,
@@ -357,9 +363,9 @@ impl<O: IsA<OutputStream>> OutputStreamExt for O {
         cancellable: Option<&Q>,
         callback: R,
     ) {
-        let user_data: Box<R> = Box::new(callback);
+        let user_data: Box_<R> = Box_::new(callback);
         unsafe extern "C" fn splice_async_trampoline<
-            R: FnOnce(Result<isize, Error>) + Send + 'static,
+            R: FnOnce(Result<isize, glib::Error>) + Send + 'static,
         >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
@@ -373,7 +379,7 @@ impl<O: IsA<OutputStream>> OutputStreamExt for O {
             } else {
                 Err(from_glib_full(error))
             };
-            let callback: Box<R> = Box::from_raw(user_data as *mut _);
+            let callback: Box_<R> = Box_::from_raw(user_data as *mut _);
             callback(result);
         }
         let callback = splice_async_trampoline::<R>;
@@ -385,40 +391,35 @@ impl<O: IsA<OutputStream>> OutputStreamExt for O {
                 io_priority.to_glib(),
                 cancellable.map(|p| p.as_ref()).to_glib_none().0,
                 Some(callback),
-                Box::into_raw(user_data) as *mut _,
+                Box_::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     fn splice_async_future<P: IsA<InputStream> + Clone + 'static>(
         &self,
         source: &P,
         flags: OutputStreamSpliceFlags,
         io_priority: glib::Priority,
-    ) -> Box_<dyn future::Future<Output = Result<isize, Error>> + std::marker::Unpin> {
-        use fragile::Fragile;
-        use GioFuture;
-
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<isize, glib::Error>> + 'static>> {
         let source = source.clone();
-        GioFuture::new(self, move |obj, send| {
+        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             obj.splice_async(
                 &source,
                 flags,
                 io_priority,
                 Some(&cancellable),
                 move |res| {
-                    let _ = send.into_inner().send(res);
+                    send.resolve(res);
                 },
             );
 
             cancellable
-        })
+        }))
     }
 
-    //fn vprintf<P: IsA<Cancellable>>(&self, cancellable: Option<&P>, error: &mut Error, format: &str, args: /*Unknown conversion*//*Unimplemented*/Unsupported) -> Option<usize> {
+    //fn vprintf<P: IsA<Cancellable>>(&self, cancellable: Option<&P>, error: &mut glib::Error, format: &str, args: /*Unknown conversion*//*Unimplemented*/Unsupported) -> Option<usize> {
     //    unsafe { TODO: call gio_sys:g_output_stream_vprintf() }
     //}
 
@@ -426,7 +427,7 @@ impl<O: IsA<OutputStream>> OutputStreamExt for O {
         &self,
         buffer: &[u8],
         cancellable: Option<&P>,
-    ) -> Result<isize, Error> {
+    ) -> Result<isize, glib::Error> {
         let count = buffer.len() as usize;
         unsafe {
             let mut error = ptr::null_mut();
@@ -449,7 +450,7 @@ impl<O: IsA<OutputStream>> OutputStreamExt for O {
         &self,
         bytes: &glib::Bytes,
         cancellable: Option<&P>,
-    ) -> Result<isize, Error> {
+    ) -> Result<isize, glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let ret = gio_sys::g_output_stream_write_bytes(
@@ -466,16 +467,19 @@ impl<O: IsA<OutputStream>> OutputStreamExt for O {
         }
     }
 
-    fn write_bytes_async<P: IsA<Cancellable>, Q: FnOnce(Result<isize, Error>) + Send + 'static>(
+    fn write_bytes_async<
+        P: IsA<Cancellable>,
+        Q: FnOnce(Result<isize, glib::Error>) + Send + 'static,
+    >(
         &self,
         bytes: &glib::Bytes,
         io_priority: glib::Priority,
         cancellable: Option<&P>,
         callback: Q,
     ) {
-        let user_data: Box<Q> = Box::new(callback);
+        let user_data: Box_<Q> = Box_::new(callback);
         unsafe extern "C" fn write_bytes_async_trampoline<
-            Q: FnOnce(Result<isize, Error>) + Send + 'static,
+            Q: FnOnce(Result<isize, glib::Error>) + Send + 'static,
         >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
@@ -492,7 +496,7 @@ impl<O: IsA<OutputStream>> OutputStreamExt for O {
             } else {
                 Err(from_glib_full(error))
             };
-            let callback: Box<Q> = Box::from_raw(user_data as *mut _);
+            let callback: Box_<Q> = Box_::from_raw(user_data as *mut _);
             callback(result);
         }
         let callback = write_bytes_async_trampoline::<Q>;
@@ -503,31 +507,86 @@ impl<O: IsA<OutputStream>> OutputStreamExt for O {
                 io_priority.to_glib(),
                 cancellable.map(|p| p.as_ref()).to_glib_none().0,
                 Some(callback),
-                Box::into_raw(user_data) as *mut _,
+                Box_::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     fn write_bytes_async_future(
         &self,
         bytes: &glib::Bytes,
         io_priority: glib::Priority,
-    ) -> Box_<dyn future::Future<Output = Result<isize, Error>> + std::marker::Unpin> {
-        use fragile::Fragile;
-        use GioFuture;
-
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<isize, glib::Error>> + 'static>> {
         let bytes = bytes.clone();
-        GioFuture::new(self, move |obj, send| {
+        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             obj.write_bytes_async(&bytes, io_priority, Some(&cancellable), move |res| {
-                let _ = send.into_inner().send(res);
+                send.resolve(res);
             });
 
             cancellable
-        })
+        }))
     }
+
+    //#[cfg(any(feature = "v2_60", feature = "dox"))]
+    //fn writev<P: IsA<Cancellable>>(&self, vectors: /*Ignored*/&[&OutputVector], cancellable: Option<&P>) -> Result<usize, glib::Error> {
+    //    unsafe { TODO: call gio_sys:g_output_stream_writev() }
+    //}
+
+    //#[cfg(any(feature = "v2_60", feature = "dox"))]
+    //fn writev_all<P: IsA<Cancellable>>(&self, vectors: /*Ignored*/&[&OutputVector], cancellable: Option<&P>) -> Result<usize, glib::Error> {
+    //    unsafe { TODO: call gio_sys:g_output_stream_writev_all() }
+    //}
+
+    //#[cfg(any(feature = "v2_60", feature = "dox"))]
+    //fn writev_all_async<P: IsA<Cancellable>, Q: FnOnce(Result<usize, glib::Error>) + Send + 'static>(&self, vectors: /*Ignored*/&[&OutputVector], io_priority: glib::Priority, cancellable: Option<&P>, callback: Q) {
+    //    unsafe { TODO: call gio_sys:g_output_stream_writev_all_async() }
+    //}
+
+    //
+    //#[cfg(any(feature = "v2_60", feature = "dox"))]
+    //fn writev_all_async_future(&self, vectors: /*Ignored*/&[&OutputVector], io_priority: glib::Priority) -> Pin<Box_<dyn std::future::Future<Output = Result<usize, glib::Error>> + 'static>> {
+
+    //let vectors = vectors.clone();
+    //Box_::pin(crate::GioFuture::new(self, move |obj, send| {
+    //    let cancellable = Cancellable::new();
+    //    obj.writev_all_async(
+    //        &vectors,
+    //        io_priority,
+    //        Some(&cancellable),
+    //        move |res| {
+    //            send.resolve(res);
+    //        },
+    //    );
+
+    //    cancellable
+    //}))
+    //}
+
+    //#[cfg(any(feature = "v2_60", feature = "dox"))]
+    //fn writev_async<P: IsA<Cancellable>, Q: FnOnce(Result<usize, glib::Error>) + Send + 'static>(&self, vectors: /*Ignored*/&[&OutputVector], io_priority: glib::Priority, cancellable: Option<&P>, callback: Q) {
+    //    unsafe { TODO: call gio_sys:g_output_stream_writev_async() }
+    //}
+
+    //
+    //#[cfg(any(feature = "v2_60", feature = "dox"))]
+    //fn writev_async_future(&self, vectors: /*Ignored*/&[&OutputVector], io_priority: glib::Priority) -> Pin<Box_<dyn std::future::Future<Output = Result<usize, glib::Error>> + 'static>> {
+
+    //let vectors = vectors.clone();
+    //Box_::pin(crate::GioFuture::new(self, move |obj, send| {
+    //    let cancellable = Cancellable::new();
+    //    obj.writev_async(
+    //        &vectors,
+    //        io_priority,
+    //        Some(&cancellable),
+    //        move |res| {
+    //            send.resolve(res);
+    //        },
+    //    );
+
+    //    cancellable
+    //}))
+    //}
 }
 
 impl fmt::Display for OutputStream {

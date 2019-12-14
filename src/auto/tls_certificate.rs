@@ -3,6 +3,7 @@
 // DO NOT EDIT
 
 use gio_sys;
+use glib;
 use glib::object::IsA;
 use glib::translate::*;
 use glib::GString;
@@ -12,7 +13,6 @@ use gobject_sys;
 use std;
 use std::fmt;
 use std::ptr;
-use Error;
 use SocketConnectable;
 use TlsCertificateFlags;
 
@@ -25,7 +25,9 @@ glib_wrapper! {
 }
 
 impl TlsCertificate {
-    pub fn new_from_file<P: AsRef<std::path::Path>>(file: P) -> Result<TlsCertificate, Error> {
+    pub fn new_from_file<P: AsRef<std::path::Path>>(
+        file: P,
+    ) -> Result<TlsCertificate, glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let ret = gio_sys::g_tls_certificate_new_from_file(
@@ -43,7 +45,7 @@ impl TlsCertificate {
     pub fn new_from_files<P: AsRef<std::path::Path>, Q: AsRef<std::path::Path>>(
         cert_file: P,
         key_file: Q,
-    ) -> Result<TlsCertificate, Error> {
+    ) -> Result<TlsCertificate, glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let ret = gio_sys::g_tls_certificate_new_from_files(
@@ -59,7 +61,7 @@ impl TlsCertificate {
         }
     }
 
-    pub fn new_from_pem(data: &str) -> Result<TlsCertificate, Error> {
+    pub fn new_from_pem(data: &str) -> Result<TlsCertificate, glib::Error> {
         let length = data.len() as isize;
         unsafe {
             let mut error = ptr::null_mut();
@@ -75,7 +77,7 @@ impl TlsCertificate {
 
     pub fn list_new_from_file<P: AsRef<std::path::Path>>(
         file: P,
-    ) -> Result<Vec<TlsCertificate>, Error> {
+    ) -> Result<Vec<TlsCertificate>, glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let ret = gio_sys::g_tls_certificate_list_new_from_file(
@@ -145,7 +147,7 @@ impl<O: IsA<TlsCertificate>> TlsCertificateExt for O {
     //    unsafe {
     //        let mut value = Value::from_type(</*Unknown type*/ as StaticType>::static_type());
     //        gobject_sys::g_object_get_property(self.to_glib_none().0 as *mut gobject_sys::GObject, b"certificate\0".as_ptr() as *const _, value.to_glib_none_mut().0);
-    //        value.get()
+    //        value.get().expect("Return Value for property `certificate` getter")
     //    }
     //}
 
@@ -157,7 +159,9 @@ impl<O: IsA<TlsCertificate>> TlsCertificateExt for O {
                 b"certificate-pem\0".as_ptr() as *const _,
                 value.to_glib_none_mut().0,
             );
-            value.get()
+            value
+                .get()
+                .expect("Return Value for property `certificate-pem` getter")
         }
     }
 }

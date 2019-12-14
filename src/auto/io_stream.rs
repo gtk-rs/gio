@@ -2,8 +2,6 @@
 // from gir-files (https://github.com/gtk-rs/gir-files)
 // DO NOT EDIT
 
-#[cfg(feature = "futures")]
-use futures::future;
 use gio_sys;
 use glib;
 use glib::object::Cast;
@@ -18,9 +16,9 @@ use gobject_sys;
 use std::boxed::Box as Box_;
 use std::fmt;
 use std::mem::transmute;
+use std::pin::Pin;
 use std::ptr;
 use Cancellable;
-use Error;
 use InputStream;
 use OutputStream;
 
@@ -39,20 +37,19 @@ pub const NONE_IO_STREAM: Option<&IOStream> = None;
 pub trait IOStreamExt: 'static {
     fn clear_pending(&self);
 
-    fn close<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), Error>;
+    fn close<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), glib::Error>;
 
-    fn close_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), Error>) + Send + 'static>(
+    fn close_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), glib::Error>) + Send + 'static>(
         &self,
         io_priority: glib::Priority,
         cancellable: Option<&P>,
         callback: Q,
     );
 
-    #[cfg(feature = "futures")]
     fn close_async_future(
         &self,
         io_priority: glib::Priority,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin>;
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>>;
 
     fn get_input_stream(&self) -> Option<InputStream>;
 
@@ -62,7 +59,7 @@ pub trait IOStreamExt: 'static {
 
     fn is_closed(&self) -> bool;
 
-    fn set_pending(&self) -> Result<(), Error>;
+    fn set_pending(&self) -> Result<(), glib::Error>;
 
     fn get_property_closed(&self) -> bool;
 
@@ -76,7 +73,7 @@ impl<O: IsA<IOStream>> IOStreamExt for O {
         }
     }
 
-    fn close<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), Error> {
+    fn close<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let _ = gio_sys::g_io_stream_close(
@@ -92,15 +89,15 @@ impl<O: IsA<IOStream>> IOStreamExt for O {
         }
     }
 
-    fn close_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), Error>) + Send + 'static>(
+    fn close_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), glib::Error>) + Send + 'static>(
         &self,
         io_priority: glib::Priority,
         cancellable: Option<&P>,
         callback: Q,
     ) {
-        let user_data: Box<Q> = Box::new(callback);
+        let user_data: Box_<Q> = Box_::new(callback);
         unsafe extern "C" fn close_async_trampoline<
-            Q: FnOnce(Result<(), Error>) + Send + 'static,
+            Q: FnOnce(Result<(), glib::Error>) + Send + 'static,
         >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
@@ -113,7 +110,7 @@ impl<O: IsA<IOStream>> IOStreamExt for O {
             } else {
                 Err(from_glib_full(error))
             };
-            let callback: Box<Q> = Box::from_raw(user_data as *mut _);
+            let callback: Box_<Q> = Box_::from_raw(user_data as *mut _);
             callback(result);
         }
         let callback = close_async_trampoline::<Q>;
@@ -123,28 +120,23 @@ impl<O: IsA<IOStream>> IOStreamExt for O {
                 io_priority.to_glib(),
                 cancellable.map(|p| p.as_ref()).to_glib_none().0,
                 Some(callback),
-                Box::into_raw(user_data) as *mut _,
+                Box_::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     fn close_async_future(
         &self,
         io_priority: glib::Priority,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin> {
-        use fragile::Fragile;
-        use GioFuture;
-
-        GioFuture::new(self, move |obj, send| {
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>> {
+        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             obj.close_async(io_priority, Some(&cancellable), move |res| {
-                let _ = send.into_inner().send(res);
+                send.resolve(res);
             });
 
             cancellable
-        })
+        }))
     }
 
     fn get_input_stream(&self) -> Option<InputStream> {
@@ -179,7 +171,7 @@ impl<O: IsA<IOStream>> IOStreamExt for O {
         }
     }
 
-    fn set_pending(&self) -> Result<(), Error> {
+    fn set_pending(&self) -> Result<(), glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let _ = gio_sys::g_io_stream_set_pending(self.as_ref().to_glib_none().0, &mut error);
@@ -199,7 +191,10 @@ impl<O: IsA<IOStream>> IOStreamExt for O {
                 b"closed\0".as_ptr() as *const _,
                 value.to_glib_none_mut().0,
             );
-            value.get().unwrap()
+            value
+                .get()
+                .expect("Return Value for property `closed` getter")
+                .unwrap()
         }
     }
 

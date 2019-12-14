@@ -2,19 +2,17 @@
 // from gir-files (https://github.com/gtk-rs/gir-files)
 // DO NOT EDIT
 
-#[cfg(feature = "futures")]
-use futures::future;
 use gio_sys;
+use glib;
 use glib::object::IsA;
 use glib::translate::*;
 use glib_sys;
 use gobject_sys;
-#[cfg(feature = "futures")]
 use std::boxed::Box as Box_;
 use std::fmt;
+use std::pin::Pin;
 use std::ptr;
 use Cancellable;
-use Error;
 use IOStream;
 use ProxyAddress;
 
@@ -44,13 +42,13 @@ pub trait ProxyExt: 'static {
         connection: &P,
         proxy_address: &Q,
         cancellable: Option<&R>,
-    ) -> Result<IOStream, Error>;
+    ) -> Result<IOStream, glib::Error>;
 
     fn connect_async<
         P: IsA<IOStream>,
         Q: IsA<ProxyAddress>,
         R: IsA<Cancellable>,
-        S: FnOnce(Result<IOStream, Error>) + Send + 'static,
+        S: FnOnce(Result<IOStream, glib::Error>) + Send + 'static,
     >(
         &self,
         connection: &P,
@@ -59,7 +57,6 @@ pub trait ProxyExt: 'static {
         callback: S,
     );
 
-    #[cfg(feature = "futures")]
     fn connect_async_future<
         P: IsA<IOStream> + Clone + 'static,
         Q: IsA<ProxyAddress> + Clone + 'static,
@@ -67,7 +64,7 @@ pub trait ProxyExt: 'static {
         &self,
         connection: &P,
         proxy_address: &Q,
-    ) -> Box_<dyn future::Future<Output = Result<IOStream, Error>> + std::marker::Unpin>;
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<IOStream, glib::Error>> + 'static>>;
 
     fn supports_hostname(&self) -> bool;
 }
@@ -78,7 +75,7 @@ impl<O: IsA<Proxy>> ProxyExt for O {
         connection: &P,
         proxy_address: &Q,
         cancellable: Option<&R>,
-    ) -> Result<IOStream, Error> {
+    ) -> Result<IOStream, glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let ret = gio_sys::g_proxy_connect(
@@ -100,7 +97,7 @@ impl<O: IsA<Proxy>> ProxyExt for O {
         P: IsA<IOStream>,
         Q: IsA<ProxyAddress>,
         R: IsA<Cancellable>,
-        S: FnOnce(Result<IOStream, Error>) + Send + 'static,
+        S: FnOnce(Result<IOStream, glib::Error>) + Send + 'static,
     >(
         &self,
         connection: &P,
@@ -108,9 +105,9 @@ impl<O: IsA<Proxy>> ProxyExt for O {
         cancellable: Option<&R>,
         callback: S,
     ) {
-        let user_data: Box<S> = Box::new(callback);
+        let user_data: Box_<S> = Box_::new(callback);
         unsafe extern "C" fn connect_async_trampoline<
-            S: FnOnce(Result<IOStream, Error>) + Send + 'static,
+            S: FnOnce(Result<IOStream, glib::Error>) + Send + 'static,
         >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
@@ -123,7 +120,7 @@ impl<O: IsA<Proxy>> ProxyExt for O {
             } else {
                 Err(from_glib_full(error))
             };
-            let callback: Box<S> = Box::from_raw(user_data as *mut _);
+            let callback: Box_<S> = Box_::from_raw(user_data as *mut _);
             callback(result);
         }
         let callback = connect_async_trampoline::<S>;
@@ -134,12 +131,11 @@ impl<O: IsA<Proxy>> ProxyExt for O {
                 proxy_address.as_ref().to_glib_none().0,
                 cancellable.map(|p| p.as_ref()).to_glib_none().0,
                 Some(callback),
-                Box::into_raw(user_data) as *mut _,
+                Box_::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     fn connect_async_future<
         P: IsA<IOStream> + Clone + 'static,
         Q: IsA<ProxyAddress> + Clone + 'static,
@@ -147,26 +143,22 @@ impl<O: IsA<Proxy>> ProxyExt for O {
         &self,
         connection: &P,
         proxy_address: &Q,
-    ) -> Box_<dyn future::Future<Output = Result<IOStream, Error>> + std::marker::Unpin> {
-        use fragile::Fragile;
-        use GioFuture;
-
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<IOStream, glib::Error>> + 'static>> {
         let connection = connection.clone();
         let proxy_address = proxy_address.clone();
-        GioFuture::new(self, move |obj, send| {
+        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             obj.connect_async(
                 &connection,
                 &proxy_address,
                 Some(&cancellable),
                 move |res| {
-                    let _ = send.into_inner().send(res);
+                    send.resolve(res);
                 },
             );
 
             cancellable
-        })
+        }))
     }
 
     fn supports_hostname(&self) -> bool {

@@ -3,11 +3,13 @@
 // DO NOT EDIT
 
 use gio_sys;
+use glib;
 use glib::object::Cast;
 use glib::object::IsA;
 use glib::signal::connect_raw;
 use glib::signal::SignalHandlerId;
 use glib::translate::*;
+use glib::value::SetValueOptional;
 use glib::GString;
 use glib::Value;
 use glib_sys;
@@ -16,7 +18,6 @@ use std::boxed::Box as Box_;
 use std::fmt;
 use std::mem::transmute;
 use std::ptr;
-use Error;
 use InetAddress;
 use SocketFamily;
 
@@ -29,7 +30,7 @@ glib_wrapper! {
 }
 
 impl InetAddressMask {
-    pub fn new<P: IsA<InetAddress>>(addr: &P, length: u32) -> Result<InetAddressMask, Error> {
+    pub fn new<P: IsA<InetAddress>>(addr: &P, length: u32) -> Result<InetAddressMask, glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let ret = gio_sys::g_inet_address_mask_new(
@@ -45,7 +46,7 @@ impl InetAddressMask {
         }
     }
 
-    pub fn new_from_string(mask_string: &str) -> Result<InetAddressMask, Error> {
+    pub fn new_from_string(mask_string: &str) -> Result<InetAddressMask, glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let ret = gio_sys::g_inet_address_mask_new_from_string(
@@ -79,7 +80,7 @@ pub trait InetAddressMaskExt: 'static {
 
     fn to_string(&self) -> GString;
 
-    fn set_property_address(&self, address: Option<&InetAddress>);
+    fn set_property_address<P: IsA<InetAddress> + SetValueOptional>(&self, address: Option<&P>);
 
     fn set_property_length(&self, length: u32);
 
@@ -146,7 +147,7 @@ impl<O: IsA<InetAddressMask>> InetAddressMaskExt for O {
         }
     }
 
-    fn set_property_address(&self, address: Option<&InetAddress>) {
+    fn set_property_address<P: IsA<InetAddress> + SetValueOptional>(&self, address: Option<&P>) {
         unsafe {
             gobject_sys::g_object_set_property(
                 self.to_glib_none().0 as *mut gobject_sys::GObject,

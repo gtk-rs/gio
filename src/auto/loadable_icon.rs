@@ -2,20 +2,18 @@
 // from gir-files (https://github.com/gtk-rs/gir-files)
 // DO NOT EDIT
 
-#[cfg(feature = "futures")]
-use futures::future;
 use gio_sys;
+use glib;
 use glib::object::IsA;
 use glib::translate::*;
 use glib::GString;
 use glib_sys;
 use gobject_sys;
-#[cfg(feature = "futures")]
 use std::boxed::Box as Box_;
 use std::fmt;
+use std::pin::Pin;
 use std::ptr;
 use Cancellable;
-use Error;
 use Icon;
 use InputStream;
 
@@ -34,11 +32,11 @@ pub trait LoadableIconExt: 'static {
         &self,
         size: i32,
         cancellable: Option<&P>,
-    ) -> Result<(InputStream, GString), Error>;
+    ) -> Result<(InputStream, GString), glib::Error>;
 
     fn load_async<
         P: IsA<Cancellable>,
-        Q: FnOnce(Result<(InputStream, GString), Error>) + Send + 'static,
+        Q: FnOnce(Result<(InputStream, GString), glib::Error>) + Send + 'static,
     >(
         &self,
         size: i32,
@@ -46,11 +44,14 @@ pub trait LoadableIconExt: 'static {
         callback: Q,
     );
 
-    #[cfg(feature = "futures")]
     fn load_async_future(
         &self,
         size: i32,
-    ) -> Box_<dyn future::Future<Output = Result<(InputStream, GString), Error>> + std::marker::Unpin>;
+    ) -> Pin<
+        Box_<
+            dyn std::future::Future<Output = Result<(InputStream, GString), glib::Error>> + 'static,
+        >,
+    >;
 }
 
 impl<O: IsA<LoadableIcon>> LoadableIconExt for O {
@@ -58,7 +59,7 @@ impl<O: IsA<LoadableIcon>> LoadableIconExt for O {
         &self,
         size: i32,
         cancellable: Option<&P>,
-    ) -> Result<(InputStream, GString), Error> {
+    ) -> Result<(InputStream, GString), glib::Error> {
         unsafe {
             let mut type_ = ptr::null_mut();
             let mut error = ptr::null_mut();
@@ -79,16 +80,16 @@ impl<O: IsA<LoadableIcon>> LoadableIconExt for O {
 
     fn load_async<
         P: IsA<Cancellable>,
-        Q: FnOnce(Result<(InputStream, GString), Error>) + Send + 'static,
+        Q: FnOnce(Result<(InputStream, GString), glib::Error>) + Send + 'static,
     >(
         &self,
         size: i32,
         cancellable: Option<&P>,
         callback: Q,
     ) {
-        let user_data: Box<Q> = Box::new(callback);
+        let user_data: Box_<Q> = Box_::new(callback);
         unsafe extern "C" fn load_async_trampoline<
-            Q: FnOnce(Result<(InputStream, GString), Error>) + Send + 'static,
+            Q: FnOnce(Result<(InputStream, GString), glib::Error>) + Send + 'static,
         >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
@@ -107,7 +108,7 @@ impl<O: IsA<LoadableIcon>> LoadableIconExt for O {
             } else {
                 Err(from_glib_full(error))
             };
-            let callback: Box<Q> = Box::from_raw(user_data as *mut _);
+            let callback: Box_<Q> = Box_::from_raw(user_data as *mut _);
             callback(result);
         }
         let callback = load_async_trampoline::<Q>;
@@ -117,29 +118,27 @@ impl<O: IsA<LoadableIcon>> LoadableIconExt for O {
                 size,
                 cancellable.map(|p| p.as_ref()).to_glib_none().0,
                 Some(callback),
-                Box::into_raw(user_data) as *mut _,
+                Box_::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     fn load_async_future(
         &self,
         size: i32,
-    ) -> Box_<dyn future::Future<Output = Result<(InputStream, GString), Error>> + std::marker::Unpin>
-    {
-        use fragile::Fragile;
-        use GioFuture;
-
-        GioFuture::new(self, move |obj, send| {
+    ) -> Pin<
+        Box_<
+            dyn std::future::Future<Output = Result<(InputStream, GString), glib::Error>> + 'static,
+        >,
+    > {
+        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             obj.load_async(size, Some(&cancellable), move |res| {
-                let _ = send.into_inner().send(res);
+                send.resolve(res);
             });
 
             cancellable
-        })
+        }))
     }
 }
 

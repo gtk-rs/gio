@@ -3,6 +3,7 @@
 // DO NOT EDIT
 
 use gio_sys;
+use glib;
 use glib::object::Cast;
 use glib::object::IsA;
 use glib::signal::connect_raw;
@@ -19,7 +20,6 @@ use std::fmt;
 use std::mem::transmute;
 use std::ptr;
 use Converter;
-use Error;
 
 glib_wrapper! {
     pub struct CharsetConverter(Object<gio_sys::GCharsetConverter, gio_sys::GCharsetConverterClass, CharsetConverterClass>) @implements Converter;
@@ -30,7 +30,7 @@ glib_wrapper! {
 }
 
 impl CharsetConverter {
-    pub fn new(to_charset: &str, from_charset: &str) -> Result<CharsetConverter, Error> {
+    pub fn new(to_charset: &str, from_charset: &str) -> Result<CharsetConverter, glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let ret = gio_sys::g_charset_converter_new(
@@ -47,6 +47,7 @@ impl CharsetConverter {
     }
 }
 
+#[derive(Clone, Default)]
 pub struct CharsetConverterBuilder {
     from_charset: Option<String>,
     to_charset: Option<String>,
@@ -55,11 +56,7 @@ pub struct CharsetConverterBuilder {
 
 impl CharsetConverterBuilder {
     pub fn new() -> Self {
-        Self {
-            from_charset: None,
-            to_charset: None,
-            use_fallback: None,
-        }
+        Self::default()
     }
 
     pub fn build(self) -> CharsetConverter {
@@ -142,7 +139,9 @@ impl<O: IsA<CharsetConverter>> CharsetConverterExt for O {
                 b"from-charset\0".as_ptr() as *const _,
                 value.to_glib_none_mut().0,
             );
-            value.get()
+            value
+                .get()
+                .expect("Return Value for property `from-charset` getter")
         }
     }
 
@@ -154,7 +153,9 @@ impl<O: IsA<CharsetConverter>> CharsetConverterExt for O {
                 b"to-charset\0".as_ptr() as *const _,
                 value.to_glib_none_mut().0,
             );
-            value.get()
+            value
+                .get()
+                .expect("Return Value for property `to-charset` getter")
         }
     }
 

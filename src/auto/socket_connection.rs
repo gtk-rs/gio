@@ -2,20 +2,17 @@
 // from gir-files (https://github.com/gtk-rs/gir-files)
 // DO NOT EDIT
 
-#[cfg(feature = "futures")]
-use futures::future;
 use gio_sys;
 use glib;
 use glib::object::IsA;
 use glib::translate::*;
 use glib_sys;
 use gobject_sys;
-#[cfg(feature = "futures")]
 use std::boxed::Box as Box_;
 use std::fmt;
+use std::pin::Pin;
 use std::ptr;
 use Cancellable;
-use Error;
 use IOStream;
 use Socket;
 use SocketAddress;
@@ -69,12 +66,12 @@ pub trait SocketConnectionExt: 'static {
         &self,
         address: &P,
         cancellable: Option<&Q>,
-    ) -> Result<(), Error>;
+    ) -> Result<(), glib::Error>;
 
     fn connect_async<
         P: IsA<SocketAddress>,
         Q: IsA<Cancellable>,
-        R: FnOnce(Result<(), Error>) + Send + 'static,
+        R: FnOnce(Result<(), glib::Error>) + Send + 'static,
     >(
         &self,
         address: &P,
@@ -82,15 +79,14 @@ pub trait SocketConnectionExt: 'static {
         callback: R,
     );
 
-    #[cfg(feature = "futures")]
     fn connect_async_future<P: IsA<SocketAddress> + Clone + 'static>(
         &self,
         address: &P,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin>;
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>>;
 
-    fn get_local_address(&self) -> Result<SocketAddress, Error>;
+    fn get_local_address(&self) -> Result<SocketAddress, glib::Error>;
 
-    fn get_remote_address(&self) -> Result<SocketAddress, Error>;
+    fn get_remote_address(&self) -> Result<SocketAddress, glib::Error>;
 
     fn get_socket(&self) -> Option<Socket>;
 
@@ -102,7 +98,7 @@ impl<O: IsA<SocketConnection>> SocketConnectionExt for O {
         &self,
         address: &P,
         cancellable: Option<&Q>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let _ = gio_sys::g_socket_connection_connect(
@@ -122,16 +118,16 @@ impl<O: IsA<SocketConnection>> SocketConnectionExt for O {
     fn connect_async<
         P: IsA<SocketAddress>,
         Q: IsA<Cancellable>,
-        R: FnOnce(Result<(), Error>) + Send + 'static,
+        R: FnOnce(Result<(), glib::Error>) + Send + 'static,
     >(
         &self,
         address: &P,
         cancellable: Option<&Q>,
         callback: R,
     ) {
-        let user_data: Box<R> = Box::new(callback);
+        let user_data: Box_<R> = Box_::new(callback);
         unsafe extern "C" fn connect_async_trampoline<
-            R: FnOnce(Result<(), Error>) + Send + 'static,
+            R: FnOnce(Result<(), glib::Error>) + Send + 'static,
         >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
@@ -148,7 +144,7 @@ impl<O: IsA<SocketConnection>> SocketConnectionExt for O {
             } else {
                 Err(from_glib_full(error))
             };
-            let callback: Box<R> = Box::from_raw(user_data as *mut _);
+            let callback: Box_<R> = Box_::from_raw(user_data as *mut _);
             callback(result);
         }
         let callback = connect_async_trampoline::<R>;
@@ -158,32 +154,27 @@ impl<O: IsA<SocketConnection>> SocketConnectionExt for O {
                 address.as_ref().to_glib_none().0,
                 cancellable.map(|p| p.as_ref()).to_glib_none().0,
                 Some(callback),
-                Box::into_raw(user_data) as *mut _,
+                Box_::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     fn connect_async_future<P: IsA<SocketAddress> + Clone + 'static>(
         &self,
         address: &P,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin> {
-        use fragile::Fragile;
-        use GioFuture;
-
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>> {
         let address = address.clone();
-        GioFuture::new(self, move |obj, send| {
+        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             obj.connect_async(&address, Some(&cancellable), move |res| {
-                let _ = send.into_inner().send(res);
+                send.resolve(res);
             });
 
             cancellable
-        })
+        }))
     }
 
-    fn get_local_address(&self) -> Result<SocketAddress, Error> {
+    fn get_local_address(&self) -> Result<SocketAddress, glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let ret = gio_sys::g_socket_connection_get_local_address(
@@ -198,7 +189,7 @@ impl<O: IsA<SocketConnection>> SocketConnectionExt for O {
         }
     }
 
-    fn get_remote_address(&self) -> Result<SocketAddress, Error> {
+    fn get_remote_address(&self) -> Result<SocketAddress, glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let ret = gio_sys::g_socket_connection_get_remote_address(

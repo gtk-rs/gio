@@ -4,8 +4,9 @@
 
 #[cfg(test)]
 mod tests {
+    use crate::prelude::*;
+    use crate::MemoryInputStream;
     use glib::Bytes;
-    use *;
 
     #[test]
     fn new() {
@@ -51,9 +52,8 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "futures")]
     fn read_async_future() {
-        use futures::prelude::*;
+        use futures_util::future::TryFutureExt;
 
         let c = glib::MainContext::new();
 

@@ -2,20 +2,18 @@
 // from gir-files (https://github.com/gtk-rs/gir-files)
 // DO NOT EDIT
 
-#[cfg(feature = "futures")]
-use futures::future;
 use gio_sys;
+use glib;
 use glib::object::IsA;
 use glib::translate::*;
 use glib::GString;
 use glib_sys;
 use gobject_sys;
-#[cfg(feature = "futures")]
 use std::boxed::Box as Box_;
 use std::fmt;
+use std::pin::Pin;
 use std::ptr;
 use Cancellable;
-use Error;
 
 glib_wrapper! {
     pub struct ProxyResolver(Interface<gio_sys::GProxyResolver>);
@@ -40,20 +38,22 @@ pub trait ProxyResolverExt: 'static {
         &self,
         uri: &str,
         cancellable: Option<&P>,
-    ) -> Result<Vec<GString>, Error>;
+    ) -> Result<Vec<GString>, glib::Error>;
 
-    fn lookup_async<P: IsA<Cancellable>, Q: FnOnce(Result<Vec<GString>, Error>) + Send + 'static>(
+    fn lookup_async<
+        P: IsA<Cancellable>,
+        Q: FnOnce(Result<Vec<GString>, glib::Error>) + Send + 'static,
+    >(
         &self,
         uri: &str,
         cancellable: Option<&P>,
         callback: Q,
     );
 
-    #[cfg(feature = "futures")]
     fn lookup_async_future(
         &self,
         uri: &str,
-    ) -> Box_<dyn future::Future<Output = Result<Vec<GString>, Error>> + std::marker::Unpin>;
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<Vec<GString>, glib::Error>> + 'static>>;
 }
 
 impl<O: IsA<ProxyResolver>> ProxyResolverExt for O {
@@ -69,7 +69,7 @@ impl<O: IsA<ProxyResolver>> ProxyResolverExt for O {
         &self,
         uri: &str,
         cancellable: Option<&P>,
-    ) -> Result<Vec<GString>, Error> {
+    ) -> Result<Vec<GString>, glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let ret = gio_sys::g_proxy_resolver_lookup(
@@ -88,16 +88,16 @@ impl<O: IsA<ProxyResolver>> ProxyResolverExt for O {
 
     fn lookup_async<
         P: IsA<Cancellable>,
-        Q: FnOnce(Result<Vec<GString>, Error>) + Send + 'static,
+        Q: FnOnce(Result<Vec<GString>, glib::Error>) + Send + 'static,
     >(
         &self,
         uri: &str,
         cancellable: Option<&P>,
         callback: Q,
     ) {
-        let user_data: Box<Q> = Box::new(callback);
+        let user_data: Box_<Q> = Box_::new(callback);
         unsafe extern "C" fn lookup_async_trampoline<
-            Q: FnOnce(Result<Vec<GString>, Error>) + Send + 'static,
+            Q: FnOnce(Result<Vec<GString>, glib::Error>) + Send + 'static,
         >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
@@ -111,7 +111,7 @@ impl<O: IsA<ProxyResolver>> ProxyResolverExt for O {
             } else {
                 Err(from_glib_full(error))
             };
-            let callback: Box<Q> = Box::from_raw(user_data as *mut _);
+            let callback: Box_<Q> = Box_::from_raw(user_data as *mut _);
             callback(result);
         }
         let callback = lookup_async_trampoline::<Q>;
@@ -121,29 +121,25 @@ impl<O: IsA<ProxyResolver>> ProxyResolverExt for O {
                 uri.to_glib_none().0,
                 cancellable.map(|p| p.as_ref()).to_glib_none().0,
                 Some(callback),
-                Box::into_raw(user_data) as *mut _,
+                Box_::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     fn lookup_async_future(
         &self,
         uri: &str,
-    ) -> Box_<dyn future::Future<Output = Result<Vec<GString>, Error>> + std::marker::Unpin> {
-        use fragile::Fragile;
-        use GioFuture;
-
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<Vec<GString>, glib::Error>> + 'static>>
+    {
         let uri = String::from(uri);
-        GioFuture::new(self, move |obj, send| {
+        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             obj.lookup_async(&uri, Some(&cancellable), move |res| {
-                let _ = send.into_inner().send(res);
+                send.resolve(res);
             });
 
             cancellable
-        })
+        }))
     }
 }
 

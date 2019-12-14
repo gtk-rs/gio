@@ -8,54 +8,58 @@ use glib::object::IsA;
 use glib::translate::*;
 use glib_sys;
 use gobject_sys;
+use std::pin::Pin;
 use std::ptr;
 use Cancellable;
-use Error;
 use File;
 use FileCreateFlags;
-
-#[cfg(feature = "futures")]
-use futures::future;
 
 pub trait FileExtManual: Sized {
     fn replace_contents_async<
         B: AsRef<[u8]> + Send + 'static,
-        R: FnOnce(Result<(B, glib::GString), (B, Error)>) + Send + 'static,
+        R: FnOnce(Result<(B, glib::GString), (B, glib::Error)>) + Send + 'static,
+        C: IsA<Cancellable>,
     >(
         &self,
         contents: B,
         etag: Option<&str>,
         make_backup: bool,
         flags: FileCreateFlags,
-        cancellable: Option<&Cancellable>,
+        cancellable: Option<&C>,
         callback: R,
     );
 
-    #[cfg(feature = "futures")]
-    fn replace_contents_async_future<'a, B: AsRef<[u8]> + Send + 'static>(
+    fn replace_contents_async_future<B: AsRef<[u8]> + Send + 'static>(
         &self,
         contents: B,
         etag: Option<&str>,
         make_backup: bool,
         flags: FileCreateFlags,
-    ) -> Box<dyn future::Future<Output = Result<(B, glib::GString), (B, Error)>> + std::marker::Unpin>;
+    ) -> Pin<
+        Box<
+            dyn std::future::Future<Output = Result<(B, glib::GString), (B, glib::Error)>>
+                + 'static,
+        >,
+    >;
 }
 
 impl<O: IsA<File>> FileExtManual for O {
     fn replace_contents_async<
         B: AsRef<[u8]> + Send + 'static,
-        R: FnOnce(Result<(B, glib::GString), (B, Error)>) + Send + 'static,
+        R: FnOnce(Result<(B, glib::GString), (B, glib::Error)>) + Send + 'static,
+        C: IsA<Cancellable>,
     >(
         &self,
         contents: B,
         etag: Option<&str>,
         make_backup: bool,
         flags: FileCreateFlags,
-        cancellable: Option<&Cancellable>,
+        cancellable: Option<&C>,
         callback: R,
     ) {
         let etag = etag.to_glib_none();
-        let cancellable = cancellable.to_glib_none();
+        let cancellable = cancellable.map(|c| c.as_ref());
+        let gcancellable = cancellable.to_glib_none();
         let user_data: Box<Option<(R, B)>> = Box::new(Some((callback, contents)));
         // Need to do this after boxing as the contents pointer might change by moving into the box
         let (count, contents_ptr) = {
@@ -65,7 +69,7 @@ impl<O: IsA<File>> FileExtManual for O {
         };
         unsafe extern "C" fn replace_contents_async_trampoline<
             B: AsRef<[u8]> + Send + 'static,
-            R: FnOnce(Result<(B, glib::GString), (B, Error)>) + Send + 'static,
+            R: FnOnce(Result<(B, glib::GString), (B, glib::Error)>) + Send + 'static,
         >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
@@ -98,29 +102,28 @@ impl<O: IsA<File>> FileExtManual for O {
                 etag.0,
                 make_backup.to_glib(),
                 flags.to_glib(),
-                cancellable.0,
+                gcancellable.0,
                 Some(callback),
                 Box::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     fn replace_contents_async_future<B: AsRef<[u8]> + Send + 'static>(
         &self,
         contents: B,
         etag: Option<&str>,
         make_backup: bool,
         flags: FileCreateFlags,
-    ) -> Box<dyn future::Future<Output = Result<(B, glib::GString), (B, Error)>> + std::marker::Unpin>
-    {
-        use fragile::Fragile;
-        use GioFuture;
-
+    ) -> Pin<
+        Box<
+            dyn std::future::Future<Output = Result<(B, glib::GString), (B, glib::Error)>>
+                + 'static,
+        >,
+    > {
         let etag = etag.map(glib::GString::from);
-        GioFuture::new(self, move |obj, send| {
+        Box::pin(crate::GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             obj.replace_contents_async(
                 contents,
                 etag.as_ref().map(|s| s.as_str()),
@@ -128,11 +131,11 @@ impl<O: IsA<File>> FileExtManual for O {
                 flags,
                 Some(&cancellable),
                 move |res| {
-                    let _ = send.into_inner().send(res);
+                    send.resolve(res);
                 },
             );
 
             cancellable
-        })
+        }))
     }
 }

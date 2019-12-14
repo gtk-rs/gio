@@ -2,8 +2,6 @@
 // from gir-files (https://github.com/gtk-rs/gir-files)
 // DO NOT EDIT
 
-#[cfg(feature = "futures")]
-use futures::future;
 use gio_sys;
 use glib;
 use glib::object::IsA;
@@ -12,12 +10,11 @@ use glib::GString;
 use glib_sys;
 use gobject_sys;
 use std;
-#[cfg(feature = "futures")]
 use std::boxed::Box as Box_;
 use std::mem;
+use std::pin::Pin;
 use std::ptr;
 use Cancellable;
-use Error;
 use File;
 use IOErrorEnum;
 use IOStream;
@@ -27,31 +24,28 @@ use Resource;
 use ResourceLookupFlags;
 use SettingsBackend;
 
-//pub fn bus_get<P: IsA<Cancellable>, Q: FnOnce(Result</*Ignored*/DBusConnection, Error>) + Send + 'static>(bus_type: /*Ignored*/BusType, cancellable: Option<&P>, callback: Q) {
+//pub fn bus_get<P: IsA<Cancellable>, Q: FnOnce(Result</*Ignored*/DBusConnection, glib::Error>) + Send + 'static>(bus_type: /*Ignored*/BusType, cancellable: Option<&P>, callback: Q) {
 //    unsafe { TODO: call gio_sys:g_bus_get() }
 //}
 
-//#[cfg(feature = "futures")]
-//pub fn bus_get_future(bus_type: /*Ignored*/BusType) -> Box_<dyn future::Future<Output = Result</*Ignored*/DBusConnection, Error>> + std::marker::Unpin> {
-//use GioFuture;
-//use fragile::Fragile;
+//
+//pub fn bus_get_future(bus_type: /*Ignored*/BusType) -> Pin<Box_<dyn std::future::Future<Output = Result</*Ignored*/DBusConnection, glib::Error>> + 'static>> {
 
-//GioFuture::new(&(), move |_obj, send| {
+//Box_::pin(crate::GioFuture::new(&(), move |_obj, send| {
 //    let cancellable = Cancellable::new();
-//    let send = Fragile::new(send);
 //    bus_get(
 //        bus_type,
 //        Some(&cancellable),
 //        move |res| {
-//            let _ = send.into_inner().send(res);
+//            send.resolve(res);
 //        },
 //    );
 
 //    cancellable
-//})
+//}))
 //}
 
-//pub fn bus_get_sync<P: IsA<Cancellable>>(bus_type: /*Ignored*/BusType, cancellable: Option<&P>) -> Result</*Ignored*/DBusConnection, Error> {
+//pub fn bus_get_sync<P: IsA<Cancellable>>(bus_type: /*Ignored*/BusType, cancellable: Option<&P>) -> Result</*Ignored*/DBusConnection, glib::Error> {
 //    unsafe { TODO: call gio_sys:g_bus_get_sync() }
 //}
 
@@ -144,6 +138,11 @@ pub fn content_type_get_icon(type_: &str) -> Option<Icon> {
     unsafe { from_glib_full(gio_sys::g_content_type_get_icon(type_.to_glib_none().0)) }
 }
 
+#[cfg(any(feature = "v2_60", feature = "dox"))]
+pub fn content_type_get_mime_dirs() -> Vec<GString> {
+    unsafe { FromGlibPtrContainer::from_glib_none(gio_sys::g_content_type_get_mime_dirs()) }
+}
+
 pub fn content_type_get_mime_type(type_: &str) -> Option<GString> {
     unsafe {
         from_glib_full(gio_sys::g_content_type_get_mime_type(
@@ -163,13 +162,14 @@ pub fn content_type_get_symbolic_icon(type_: &str) -> Option<Icon> {
 pub fn content_type_guess(filename: Option<&str>, data: &[u8]) -> (GString, bool) {
     let data_size = data.len() as usize;
     unsafe {
-        let mut result_uncertain = mem::uninitialized();
+        let mut result_uncertain = mem::MaybeUninit::uninit();
         let ret = from_glib_full(gio_sys::g_content_type_guess(
             filename.to_glib_none().0,
             data.to_glib_none().0,
             data_size,
-            &mut result_uncertain,
+            result_uncertain.as_mut_ptr(),
         ));
+        let result_uncertain = result_uncertain.assume_init();
         (ret, from_glib(result_uncertain))
     }
 }
@@ -205,6 +205,13 @@ pub fn content_type_is_unknown(type_: &str) -> bool {
     unsafe { from_glib(gio_sys::g_content_type_is_unknown(type_.to_glib_none().0)) }
 }
 
+#[cfg(any(feature = "v2_60", feature = "dox"))]
+pub fn content_type_set_mime_dirs(dirs: &[&str]) {
+    unsafe {
+        gio_sys::g_content_type_set_mime_dirs(dirs.to_glib_none().0);
+    }
+}
+
 pub fn content_types_get_registered() -> Vec<GString> {
     unsafe { FromGlibPtrContainer::from_glib_full(gio_sys::g_content_types_get_registered()) }
 }
@@ -217,21 +224,21 @@ pub fn dbus_address_escape_value(string: &str) -> Option<GString> {
     }
 }
 
-//pub fn dbus_address_get_for_bus_sync<P: IsA<Cancellable>>(bus_type: /*Ignored*/BusType, cancellable: Option<&P>) -> Result<GString, Error> {
+//pub fn dbus_address_get_for_bus_sync<P: IsA<Cancellable>>(bus_type: /*Ignored*/BusType, cancellable: Option<&P>) -> Result<GString, glib::Error> {
 //    unsafe { TODO: call gio_sys:g_dbus_address_get_for_bus_sync() }
 //}
 
 pub fn dbus_address_get_stream<
     P: IsA<Cancellable>,
-    Q: FnOnce(Result<(IOStream, GString), Error>) + Send + 'static,
+    Q: FnOnce(Result<(IOStream, GString), glib::Error>) + Send + 'static,
 >(
     address: &str,
     cancellable: Option<&P>,
     callback: Q,
 ) {
-    let user_data: Box<Q> = Box::new(callback);
+    let user_data: Box_<Q> = Box_::new(callback);
     unsafe extern "C" fn dbus_address_get_stream_trampoline<
-        Q: FnOnce(Result<(IOStream, GString), Error>) + Send + 'static,
+        Q: FnOnce(Result<(IOStream, GString), glib::Error>) + Send + 'static,
     >(
         _source_object: *mut gobject_sys::GObject,
         res: *mut gio_sys::GAsyncResult,
@@ -245,7 +252,7 @@ pub fn dbus_address_get_stream<
         } else {
             Err(from_glib_full(error))
         };
-        let callback: Box<Q> = Box::from_raw(user_data as *mut _);
+        let callback: Box_<Q> = Box_::from_raw(user_data as *mut _);
         callback(result);
     }
     let callback = dbus_address_get_stream_trampoline::<Q>;
@@ -254,34 +261,30 @@ pub fn dbus_address_get_stream<
             address.to_glib_none().0,
             cancellable.map(|p| p.as_ref()).to_glib_none().0,
             Some(callback),
-            Box::into_raw(user_data) as *mut _,
+            Box_::into_raw(user_data) as *mut _,
         );
     }
 }
 
-#[cfg(feature = "futures")]
 pub fn dbus_address_get_stream_future(
     address: &str,
-) -> Box_<dyn future::Future<Output = Result<(IOStream, GString), Error>> + std::marker::Unpin> {
-    use fragile::Fragile;
-    use GioFuture;
-
+) -> Pin<Box_<dyn std::future::Future<Output = Result<(IOStream, GString), glib::Error>> + 'static>>
+{
     let address = String::from(address);
-    GioFuture::new(&(), move |_obj, send| {
+    Box_::pin(crate::GioFuture::new(&(), move |_obj, send| {
         let cancellable = Cancellable::new();
-        let send = Fragile::new(send);
         dbus_address_get_stream(&address, Some(&cancellable), move |res| {
-            let _ = send.into_inner().send(res);
+            send.resolve(res);
         });
 
         cancellable
-    })
+    }))
 }
 
 pub fn dbus_address_get_stream_sync<P: IsA<Cancellable>>(
     address: &str,
     cancellable: Option<&P>,
-) -> Result<(IOStream, GString), Error> {
+) -> Result<(IOStream, GString), glib::Error> {
     unsafe {
         let mut out_guid = ptr::null_mut();
         let mut error = ptr::null_mut();
@@ -343,7 +346,7 @@ pub fn dbus_is_name(string: &str) -> bool {
     unsafe { from_glib(gio_sys::g_dbus_is_name(string.to_glib_none().0)) }
 }
 
-pub fn dbus_is_supported_address(string: &str) -> Result<(), Error> {
+pub fn dbus_is_supported_address(string: &str) -> Result<(), glib::Error> {
     unsafe {
         let mut error = ptr::null_mut();
         let _ = gio_sys::g_dbus_is_supported_address(string.to_glib_none().0, &mut error);
@@ -426,7 +429,7 @@ pub fn null_settings_backend_new() -> Option<SettingsBackend> {
 pub fn resources_enumerate_children(
     path: &str,
     lookup_flags: ResourceLookupFlags,
-) -> Result<Vec<GString>, Error> {
+) -> Result<Vec<GString>, glib::Error> {
     unsafe {
         let mut error = ptr::null_mut();
         let ret = gio_sys::g_resources_enumerate_children(
@@ -445,18 +448,20 @@ pub fn resources_enumerate_children(
 pub fn resources_get_info(
     path: &str,
     lookup_flags: ResourceLookupFlags,
-) -> Result<(usize, u32), Error> {
+) -> Result<(usize, u32), glib::Error> {
     unsafe {
-        let mut size = mem::uninitialized();
-        let mut flags = mem::uninitialized();
+        let mut size = mem::MaybeUninit::uninit();
+        let mut flags = mem::MaybeUninit::uninit();
         let mut error = ptr::null_mut();
         let _ = gio_sys::g_resources_get_info(
             path.to_glib_none().0,
             lookup_flags.to_glib(),
-            &mut size,
-            &mut flags,
+            size.as_mut_ptr(),
+            flags.as_mut_ptr(),
             &mut error,
         );
+        let size = size.assume_init();
+        let flags = flags.assume_init();
         if error.is_null() {
             Ok((size, flags))
         } else {
@@ -468,7 +473,7 @@ pub fn resources_get_info(
 pub fn resources_lookup_data(
     path: &str,
     lookup_flags: ResourceLookupFlags,
-) -> Result<glib::Bytes, Error> {
+) -> Result<glib::Bytes, glib::Error> {
     unsafe {
         let mut error = ptr::null_mut();
         let ret = gio_sys::g_resources_lookup_data(
@@ -487,7 +492,7 @@ pub fn resources_lookup_data(
 pub fn resources_open_stream(
     path: &str,
     lookup_flags: ResourceLookupFlags,
-) -> Result<InputStream, Error> {
+) -> Result<InputStream, glib::Error> {
     unsafe {
         let mut error = ptr::null_mut();
         let ret = gio_sys::g_resources_open_stream(
@@ -516,17 +521,17 @@ pub fn resources_unregister(resource: &Resource) {
 }
 
 //#[cfg_attr(feature = "v2_46", deprecated)]
-//pub fn simple_async_report_error_in_idle<P: IsA<glib::Object>, Q: FnOnce(Result<(), Error>) + 'static>(object: Option<&P>, callback: Q, domain: glib::Quark, code: i32, format: &str, : /*Unknown conversion*//*Unimplemented*/Fundamental: VarArgs) {
+//pub fn simple_async_report_error_in_idle<P: IsA<glib::Object>, Q: FnOnce(Result<(), glib::Error>) + 'static>(object: Option<&P>, callback: Q, domain: glib::Quark, code: i32, format: &str, : /*Unknown conversion*//*Unimplemented*/Fundamental: VarArgs) {
 //    unsafe { TODO: call gio_sys:g_simple_async_report_error_in_idle() }
 //}
 
 //#[cfg_attr(feature = "v2_46", deprecated)]
-//pub fn simple_async_report_gerror_in_idle<P: IsA<glib::Object>, Q: FnOnce(Result<(), Error>) + 'static>(object: Option<&P>, callback: Q, error: &Error) {
+//pub fn simple_async_report_gerror_in_idle<P: IsA<glib::Object>, Q: FnOnce(Result<(), glib::Error>) + 'static>(object: Option<&P>, callback: Q, error: &glib::Error) {
 //    unsafe { TODO: call gio_sys:g_simple_async_report_gerror_in_idle() }
 //}
 
 //#[cfg_attr(feature = "v2_46", deprecated)]
-//pub fn simple_async_report_take_gerror_in_idle<P: IsA<glib::Object>, Q: FnOnce(Result<(), Error>) + 'static>(object: Option<&P>, callback: Q, error: &mut Error) {
+//pub fn simple_async_report_take_gerror_in_idle<P: IsA<glib::Object>, Q: FnOnce(Result<(), glib::Error>) + 'static>(object: Option<&P>, callback: Q, error: &mut glib::Error) {
 //    unsafe { TODO: call gio_sys:g_simple_async_report_take_gerror_in_idle() }
 //}
 
@@ -554,106 +559,3 @@ pub fn unix_is_system_device_path<P: AsRef<std::path::Path>>(device_path: P) -> 
 pub fn unix_is_system_fs_type(fs_type: &str) -> bool {
     unsafe { from_glib(gio_sys::g_unix_is_system_fs_type(fs_type.to_glib_none().0)) }
 }
-
-//#[cfg(any(unix, feature = "dox"))]
-//pub fn unix_mount_at<P: AsRef<std::path::Path>>(mount_path: P) -> (/*Ignored*/UnixMountEntry, u64) {
-//    unsafe { TODO: call gio_sys:g_unix_mount_at() }
-//}
-
-//#[cfg(any(unix, feature = "dox"))]
-//pub fn unix_mount_compare(mount1: /*Ignored*/&mut UnixMountEntry, mount2: /*Ignored*/&mut UnixMountEntry) -> i32 {
-//    unsafe { TODO: call gio_sys:g_unix_mount_compare() }
-//}
-
-//#[cfg(any(unix, feature = "dox"))]
-//#[cfg(any(feature = "v2_54", feature = "dox"))]
-//pub fn unix_mount_copy(mount_entry: /*Ignored*/&mut UnixMountEntry) -> /*Ignored*/Option<UnixMountEntry> {
-//    unsafe { TODO: call gio_sys:g_unix_mount_copy() }
-//}
-
-//#[cfg(any(unix, feature = "dox"))]
-//#[cfg(any(feature = "v2_52", feature = "dox"))]
-//pub fn unix_mount_for<P: AsRef<std::path::Path>>(file_path: P) -> (/*Ignored*/UnixMountEntry, u64) {
-//    unsafe { TODO: call gio_sys:g_unix_mount_for() }
-//}
-
-//#[cfg(any(unix, feature = "dox"))]
-//pub fn unix_mount_free(mount_entry: /*Ignored*/&mut UnixMountEntry) {
-//    unsafe { TODO: call gio_sys:g_unix_mount_free() }
-//}
-
-//#[cfg(any(unix, feature = "dox"))]
-//pub fn unix_mount_get_device_path(mount_entry: /*Ignored*/&mut UnixMountEntry) -> Option<std::path::PathBuf> {
-//    unsafe { TODO: call gio_sys:g_unix_mount_get_device_path() }
-//}
-
-//#[cfg(any(unix, feature = "dox"))]
-//pub fn unix_mount_get_fs_type(mount_entry: /*Ignored*/&mut UnixMountEntry) -> Option<GString> {
-//    unsafe { TODO: call gio_sys:g_unix_mount_get_fs_type() }
-//}
-
-//#[cfg(any(unix, feature = "dox"))]
-//pub fn unix_mount_get_mount_path(mount_entry: /*Ignored*/&mut UnixMountEntry) -> Option<std::path::PathBuf> {
-//    unsafe { TODO: call gio_sys:g_unix_mount_get_mount_path() }
-//}
-
-//#[cfg(any(unix, feature = "dox"))]
-//#[cfg(any(feature = "v2_58", feature = "dox"))]
-//pub fn unix_mount_get_options(mount_entry: /*Ignored*/&mut UnixMountEntry) -> Option<GString> {
-//    unsafe { TODO: call gio_sys:g_unix_mount_get_options() }
-//}
-
-//#[cfg(any(unix, feature = "dox"))]
-//pub fn unix_mount_guess_can_eject(mount_entry: /*Ignored*/&mut UnixMountEntry) -> bool {
-//    unsafe { TODO: call gio_sys:g_unix_mount_guess_can_eject() }
-//}
-
-//#[cfg(any(unix, feature = "dox"))]
-//pub fn unix_mount_guess_icon(mount_entry: /*Ignored*/&mut UnixMountEntry) -> Option<Icon> {
-//    unsafe { TODO: call gio_sys:g_unix_mount_guess_icon() }
-//}
-
-//#[cfg(any(unix, feature = "dox"))]
-//pub fn unix_mount_guess_name(mount_entry: /*Ignored*/&mut UnixMountEntry) -> Option<GString> {
-//    unsafe { TODO: call gio_sys:g_unix_mount_guess_name() }
-//}
-
-//#[cfg(any(unix, feature = "dox"))]
-//pub fn unix_mount_guess_should_display(mount_entry: /*Ignored*/&mut UnixMountEntry) -> bool {
-//    unsafe { TODO: call gio_sys:g_unix_mount_guess_should_display() }
-//}
-
-//#[cfg(any(unix, feature = "dox"))]
-//pub fn unix_mount_guess_symbolic_icon(mount_entry: /*Ignored*/&mut UnixMountEntry) -> Option<Icon> {
-//    unsafe { TODO: call gio_sys:g_unix_mount_guess_symbolic_icon() }
-//}
-
-//#[cfg(any(unix, feature = "dox"))]
-//pub fn unix_mount_is_readonly(mount_entry: /*Ignored*/&mut UnixMountEntry) -> bool {
-//    unsafe { TODO: call gio_sys:g_unix_mount_is_readonly() }
-//}
-
-//#[cfg(any(unix, feature = "dox"))]
-//pub fn unix_mount_is_system_internal(mount_entry: /*Ignored*/&mut UnixMountEntry) -> bool {
-//    unsafe { TODO: call gio_sys:g_unix_mount_is_system_internal() }
-//}
-
-#[cfg(any(unix, feature = "dox"))]
-pub fn unix_mount_points_changed_since(time: u64) -> bool {
-    unsafe { from_glib(gio_sys::g_unix_mount_points_changed_since(time)) }
-}
-
-//#[cfg(any(unix, feature = "dox"))]
-//pub fn unix_mount_points_get() -> (/*Ignored*/Vec<UnixMountPoint>, u64) {
-//    unsafe { TODO: call gio_sys:g_unix_mount_points_get() }
-//}
-
-#[cfg(any(unix, feature = "dox"))]
-pub fn unix_mounts_changed_since(time: u64) -> bool {
-    unsafe { from_glib(gio_sys::g_unix_mounts_changed_since(time)) }
-}
-
-//#[cfg(any(unix, feature = "dox"))]
-//pub fn unix_mounts_get() -> (/*Ignored*/Vec<UnixMountEntry>, u64) {
-//    unsafe { TODO: call gio_sys:g_unix_mounts_get() }
-//}

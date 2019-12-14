@@ -5,13 +5,6 @@
 use gio_sys;
 use std::ffi::CStr;
 
-lazy_static! {
-    pub static ref DESKTOP_APP_INFO_LOOKUP_EXTENSION_POINT_NAME: &'static str = unsafe {
-        CStr::from_ptr(gio_sys::G_DESKTOP_APP_INFO_LOOKUP_EXTENSION_POINT_NAME)
-            .to_str()
-            .unwrap()
-    };
-}
 #[cfg(any(feature = "v2_58", feature = "dox"))]
 lazy_static! {
     pub static ref DRIVE_IDENTIFIER_KIND_UNIX_DEVICE: &'static str = unsafe {
@@ -69,9 +62,25 @@ lazy_static! {
             .unwrap()
     };
 }
+#[cfg(any(feature = "v2_60", feature = "dox"))]
+lazy_static! {
+    pub static ref FILE_ATTRIBUTE_DOS_IS_MOUNTPOINT: &'static str = unsafe {
+        CStr::from_ptr(gio_sys::G_FILE_ATTRIBUTE_DOS_IS_MOUNTPOINT)
+            .to_str()
+            .unwrap()
+    };
+}
 lazy_static! {
     pub static ref FILE_ATTRIBUTE_DOS_IS_SYSTEM: &'static str = unsafe {
         CStr::from_ptr(gio_sys::G_FILE_ATTRIBUTE_DOS_IS_SYSTEM)
+            .to_str()
+            .unwrap()
+    };
+}
+#[cfg(any(feature = "v2_60", feature = "dox"))]
+lazy_static! {
+    pub static ref FILE_ATTRIBUTE_DOS_REPARSE_POINT_TAG: &'static str = unsafe {
+        CStr::from_ptr(gio_sys::G_FILE_ATTRIBUTE_DOS_REPARSE_POINT_TAG)
             .to_str()
             .unwrap()
     };
