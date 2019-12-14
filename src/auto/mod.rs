@@ -121,6 +121,10 @@ mod file;
 pub use self::file::FileExt;
 pub use self::file::{File, NONE_FILE};
 
+mod file_enumerator;
+pub use self::file_enumerator::FileEnumeratorExt;
+pub use self::file_enumerator::{FileEnumerator, FileEnumeratorClass, NONE_FILE_ENUMERATOR};
+
 mod file_io_stream;
 pub use self::file_io_stream::FileIOStreamExt;
 pub use self::file_io_stream::{FileIOStream, FileIOStreamClass, NONE_FILE_IO_STREAM};
@@ -483,6 +487,16 @@ pub use self::settings_schema_source::SettingsSchemaSource;
 mod srv_target;
 pub use self::srv_target::SrvTarget;
 
+#[cfg(any(unix, feature = "dox"))]
+mod unix_mount_entry;
+#[cfg(any(unix, feature = "dox"))]
+pub use self::unix_mount_entry::UnixMountEntry;
+
+#[cfg(any(unix, feature = "dox"))]
+mod unix_mount_point;
+#[cfg(any(unix, feature = "dox"))]
+pub use self::unix_mount_point::UnixMountPoint;
+
 mod enums;
 pub use self::enums::ConverterResult;
 pub use self::enums::CredentialsType;
@@ -531,6 +545,8 @@ pub use self::flags::IOStreamSpliceFlags;
 pub use self::flags::MountMountFlags;
 pub use self::flags::MountUnmountFlags;
 pub use self::flags::OutputStreamSpliceFlags;
+#[cfg(any(feature = "v2_60", feature = "dox"))]
+pub use self::flags::ResolverNameLookupFlags;
 pub use self::flags::ResourceLookupFlags;
 pub use self::flags::SettingsBindFlags;
 pub use self::flags::SubprocessFlags;
@@ -541,7 +557,6 @@ pub use self::flags::TlsPasswordFlags;
 pub mod functions;
 
 mod constants;
-pub use self::constants::DESKTOP_APP_INFO_LOOKUP_EXTENSION_POINT_NAME;
 #[cfg(any(feature = "v2_58", feature = "dox"))]
 pub use self::constants::DRIVE_IDENTIFIER_KIND_UNIX_DEVICE;
 pub use self::constants::FILE_ATTRIBUTE_ACCESS_CAN_DELETE;
@@ -551,7 +566,11 @@ pub use self::constants::FILE_ATTRIBUTE_ACCESS_CAN_RENAME;
 pub use self::constants::FILE_ATTRIBUTE_ACCESS_CAN_TRASH;
 pub use self::constants::FILE_ATTRIBUTE_ACCESS_CAN_WRITE;
 pub use self::constants::FILE_ATTRIBUTE_DOS_IS_ARCHIVE;
+#[cfg(any(feature = "v2_60", feature = "dox"))]
+pub use self::constants::FILE_ATTRIBUTE_DOS_IS_MOUNTPOINT;
 pub use self::constants::FILE_ATTRIBUTE_DOS_IS_SYSTEM;
+#[cfg(any(feature = "v2_60", feature = "dox"))]
+pub use self::constants::FILE_ATTRIBUTE_DOS_REPARSE_POINT_TAG;
 pub use self::constants::FILE_ATTRIBUTE_ETAG_VALUE;
 pub use self::constants::FILE_ATTRIBUTE_FILESYSTEM_FREE;
 pub use self::constants::FILE_ATTRIBUTE_FILESYSTEM_READONLY;
@@ -673,6 +692,7 @@ pub mod traits {
     pub use super::DesktopAppInfoExt;
     pub use super::DriveExt;
     pub use super::EmblemedIconExt;
+    pub use super::FileEnumeratorExt;
     pub use super::FileExt;
     pub use super::FileIOStreamExt;
     pub use super::FileInputStreamExt;

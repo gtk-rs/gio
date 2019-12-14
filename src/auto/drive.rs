@@ -2,9 +2,8 @@
 // from gir-files (https://github.com/gtk-rs/gir-files)
 // DO NOT EDIT
 
-#[cfg(feature = "futures")]
-use futures::future;
 use gio_sys;
+use glib;
 use glib::object::Cast;
 use glib::object::IsA;
 use glib::signal::connect_raw;
@@ -16,11 +15,11 @@ use gobject_sys;
 use std::boxed::Box as Box_;
 use std::fmt;
 use std::mem::transmute;
+use std::pin::Pin;
 use std::ptr;
 use Cancellable;
 use DriveStartFlags;
 use DriveStartStopType;
-use Error;
 use Icon;
 use MountOperation;
 use MountUnmountFlags;
@@ -50,7 +49,7 @@ pub trait DriveExt: 'static {
     fn eject_with_operation<
         P: IsA<MountOperation>,
         Q: IsA<Cancellable>,
-        R: FnOnce(Result<(), Error>) + Send + 'static,
+        R: FnOnce(Result<(), glib::Error>) + Send + 'static,
     >(
         &self,
         flags: MountUnmountFlags,
@@ -59,12 +58,11 @@ pub trait DriveExt: 'static {
         callback: R,
     );
 
-    #[cfg(feature = "futures")]
     fn eject_with_operation_future<P: IsA<MountOperation> + Clone + 'static>(
         &self,
         flags: MountUnmountFlags,
         mount_operation: Option<&P>,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin>;
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>>;
 
     fn enumerate_identifiers(&self) -> Vec<GString>;
 
@@ -93,21 +91,20 @@ pub trait DriveExt: 'static {
     #[cfg(any(feature = "v2_50", feature = "dox"))]
     fn is_removable(&self) -> bool;
 
-    fn poll_for_media<P: IsA<Cancellable>, Q: FnOnce(Result<(), Error>) + Send + 'static>(
+    fn poll_for_media<P: IsA<Cancellable>, Q: FnOnce(Result<(), glib::Error>) + Send + 'static>(
         &self,
         cancellable: Option<&P>,
         callback: Q,
     );
 
-    #[cfg(feature = "futures")]
     fn poll_for_media_future(
         &self,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin>;
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>>;
 
     fn start<
         P: IsA<MountOperation>,
         Q: IsA<Cancellable>,
-        R: FnOnce(Result<(), Error>) + Send + 'static,
+        R: FnOnce(Result<(), glib::Error>) + Send + 'static,
     >(
         &self,
         flags: DriveStartFlags,
@@ -116,17 +113,16 @@ pub trait DriveExt: 'static {
         callback: R,
     );
 
-    #[cfg(feature = "futures")]
     fn start_future<P: IsA<MountOperation> + Clone + 'static>(
         &self,
         flags: DriveStartFlags,
         mount_operation: Option<&P>,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin>;
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>>;
 
     fn stop<
         P: IsA<MountOperation>,
         Q: IsA<Cancellable>,
-        R: FnOnce(Result<(), Error>) + Send + 'static,
+        R: FnOnce(Result<(), glib::Error>) + Send + 'static,
     >(
         &self,
         flags: MountUnmountFlags,
@@ -135,12 +131,11 @@ pub trait DriveExt: 'static {
         callback: R,
     );
 
-    #[cfg(feature = "futures")]
     fn stop_future<P: IsA<MountOperation> + Clone + 'static>(
         &self,
         flags: MountUnmountFlags,
         mount_operation: Option<&P>,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin>;
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>>;
 
     fn connect_changed<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
 
@@ -183,7 +178,7 @@ impl<O: IsA<Drive>> DriveExt for O {
     fn eject_with_operation<
         P: IsA<MountOperation>,
         Q: IsA<Cancellable>,
-        R: FnOnce(Result<(), Error>) + Send + 'static,
+        R: FnOnce(Result<(), glib::Error>) + Send + 'static,
     >(
         &self,
         flags: MountUnmountFlags,
@@ -191,9 +186,9 @@ impl<O: IsA<Drive>> DriveExt for O {
         cancellable: Option<&Q>,
         callback: R,
     ) {
-        let user_data: Box<R> = Box::new(callback);
+        let user_data: Box_<R> = Box_::new(callback);
         unsafe extern "C" fn eject_with_operation_trampoline<
-            R: FnOnce(Result<(), Error>) + Send + 'static,
+            R: FnOnce(Result<(), glib::Error>) + Send + 'static,
         >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
@@ -210,7 +205,7 @@ impl<O: IsA<Drive>> DriveExt for O {
             } else {
                 Err(from_glib_full(error))
             };
-            let callback: Box<R> = Box::from_raw(user_data as *mut _);
+            let callback: Box_<R> = Box_::from_raw(user_data as *mut _);
             callback(result);
         }
         let callback = eject_with_operation_trampoline::<R>;
@@ -221,35 +216,30 @@ impl<O: IsA<Drive>> DriveExt for O {
                 mount_operation.map(|p| p.as_ref()).to_glib_none().0,
                 cancellable.map(|p| p.as_ref()).to_glib_none().0,
                 Some(callback),
-                Box::into_raw(user_data) as *mut _,
+                Box_::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     fn eject_with_operation_future<P: IsA<MountOperation> + Clone + 'static>(
         &self,
         flags: MountUnmountFlags,
         mount_operation: Option<&P>,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin> {
-        use fragile::Fragile;
-        use GioFuture;
-
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>> {
         let mount_operation = mount_operation.map(ToOwned::to_owned);
-        GioFuture::new(self, move |obj, send| {
+        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             obj.eject_with_operation(
                 flags,
                 mount_operation.as_ref().map(::std::borrow::Borrow::borrow),
                 Some(&cancellable),
                 move |res| {
-                    let _ = send.into_inner().send(res);
+                    send.resolve(res);
                 },
             );
 
             cancellable
-        })
+        }))
     }
 
     fn enumerate_identifiers(&self) -> Vec<GString> {
@@ -342,14 +332,14 @@ impl<O: IsA<Drive>> DriveExt for O {
         }
     }
 
-    fn poll_for_media<P: IsA<Cancellable>, Q: FnOnce(Result<(), Error>) + Send + 'static>(
+    fn poll_for_media<P: IsA<Cancellable>, Q: FnOnce(Result<(), glib::Error>) + Send + 'static>(
         &self,
         cancellable: Option<&P>,
         callback: Q,
     ) {
-        let user_data: Box<Q> = Box::new(callback);
+        let user_data: Box_<Q> = Box_::new(callback);
         unsafe extern "C" fn poll_for_media_trampoline<
-            Q: FnOnce(Result<(), Error>) + Send + 'static,
+            Q: FnOnce(Result<(), glib::Error>) + Send + 'static,
         >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
@@ -363,7 +353,7 @@ impl<O: IsA<Drive>> DriveExt for O {
             } else {
                 Err(from_glib_full(error))
             };
-            let callback: Box<Q> = Box::from_raw(user_data as *mut _);
+            let callback: Box_<Q> = Box_::from_raw(user_data as *mut _);
             callback(result);
         }
         let callback = poll_for_media_trampoline::<Q>;
@@ -372,33 +362,28 @@ impl<O: IsA<Drive>> DriveExt for O {
                 self.as_ref().to_glib_none().0,
                 cancellable.map(|p| p.as_ref()).to_glib_none().0,
                 Some(callback),
-                Box::into_raw(user_data) as *mut _,
+                Box_::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     fn poll_for_media_future(
         &self,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin> {
-        use fragile::Fragile;
-        use GioFuture;
-
-        GioFuture::new(self, move |obj, send| {
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>> {
+        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             obj.poll_for_media(Some(&cancellable), move |res| {
-                let _ = send.into_inner().send(res);
+                send.resolve(res);
             });
 
             cancellable
-        })
+        }))
     }
 
     fn start<
         P: IsA<MountOperation>,
         Q: IsA<Cancellable>,
-        R: FnOnce(Result<(), Error>) + Send + 'static,
+        R: FnOnce(Result<(), glib::Error>) + Send + 'static,
     >(
         &self,
         flags: DriveStartFlags,
@@ -406,8 +391,10 @@ impl<O: IsA<Drive>> DriveExt for O {
         cancellable: Option<&Q>,
         callback: R,
     ) {
-        let user_data: Box<R> = Box::new(callback);
-        unsafe extern "C" fn start_trampoline<R: FnOnce(Result<(), Error>) + Send + 'static>(
+        let user_data: Box_<R> = Box_::new(callback);
+        unsafe extern "C" fn start_trampoline<
+            R: FnOnce(Result<(), glib::Error>) + Send + 'static,
+        >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
             user_data: glib_sys::gpointer,
@@ -419,7 +406,7 @@ impl<O: IsA<Drive>> DriveExt for O {
             } else {
                 Err(from_glib_full(error))
             };
-            let callback: Box<R> = Box::from_raw(user_data as *mut _);
+            let callback: Box_<R> = Box_::from_raw(user_data as *mut _);
             callback(result);
         }
         let callback = start_trampoline::<R>;
@@ -430,41 +417,36 @@ impl<O: IsA<Drive>> DriveExt for O {
                 mount_operation.map(|p| p.as_ref()).to_glib_none().0,
                 cancellable.map(|p| p.as_ref()).to_glib_none().0,
                 Some(callback),
-                Box::into_raw(user_data) as *mut _,
+                Box_::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     fn start_future<P: IsA<MountOperation> + Clone + 'static>(
         &self,
         flags: DriveStartFlags,
         mount_operation: Option<&P>,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin> {
-        use fragile::Fragile;
-        use GioFuture;
-
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>> {
         let mount_operation = mount_operation.map(ToOwned::to_owned);
-        GioFuture::new(self, move |obj, send| {
+        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             obj.start(
                 flags,
                 mount_operation.as_ref().map(::std::borrow::Borrow::borrow),
                 Some(&cancellable),
                 move |res| {
-                    let _ = send.into_inner().send(res);
+                    send.resolve(res);
                 },
             );
 
             cancellable
-        })
+        }))
     }
 
     fn stop<
         P: IsA<MountOperation>,
         Q: IsA<Cancellable>,
-        R: FnOnce(Result<(), Error>) + Send + 'static,
+        R: FnOnce(Result<(), glib::Error>) + Send + 'static,
     >(
         &self,
         flags: MountUnmountFlags,
@@ -472,8 +454,10 @@ impl<O: IsA<Drive>> DriveExt for O {
         cancellable: Option<&Q>,
         callback: R,
     ) {
-        let user_data: Box<R> = Box::new(callback);
-        unsafe extern "C" fn stop_trampoline<R: FnOnce(Result<(), Error>) + Send + 'static>(
+        let user_data: Box_<R> = Box_::new(callback);
+        unsafe extern "C" fn stop_trampoline<
+            R: FnOnce(Result<(), glib::Error>) + Send + 'static,
+        >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
             user_data: glib_sys::gpointer,
@@ -485,7 +469,7 @@ impl<O: IsA<Drive>> DriveExt for O {
             } else {
                 Err(from_glib_full(error))
             };
-            let callback: Box<R> = Box::from_raw(user_data as *mut _);
+            let callback: Box_<R> = Box_::from_raw(user_data as *mut _);
             callback(result);
         }
         let callback = stop_trampoline::<R>;
@@ -496,35 +480,30 @@ impl<O: IsA<Drive>> DriveExt for O {
                 mount_operation.map(|p| p.as_ref()).to_glib_none().0,
                 cancellable.map(|p| p.as_ref()).to_glib_none().0,
                 Some(callback),
-                Box::into_raw(user_data) as *mut _,
+                Box_::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     fn stop_future<P: IsA<MountOperation> + Clone + 'static>(
         &self,
         flags: MountUnmountFlags,
         mount_operation: Option<&P>,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin> {
-        use fragile::Fragile;
-        use GioFuture;
-
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>> {
         let mount_operation = mount_operation.map(ToOwned::to_owned);
-        GioFuture::new(self, move |obj, send| {
+        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             obj.stop(
                 flags,
                 mount_operation.as_ref().map(::std::borrow::Borrow::borrow),
                 Some(&cancellable),
                 move |res| {
-                    let _ = send.into_inner().send(res);
+                    send.resolve(res);
                 },
             );
 
             cancellable
-        })
+        }))
     }
 
     fn connect_changed<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId {

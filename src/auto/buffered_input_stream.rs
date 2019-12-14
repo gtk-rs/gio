@@ -2,8 +2,6 @@
 // from gir-files (https://github.com/gtk-rs/gir-files)
 // DO NOT EDIT
 
-#[cfg(feature = "futures")]
-use futures::future;
 use gio_sys;
 use glib;
 use glib::object::Cast;
@@ -19,9 +17,9 @@ use std::boxed::Box as Box_;
 use std::fmt;
 use std::mem;
 use std::mem::transmute;
+use std::pin::Pin;
 use std::ptr;
 use Cancellable;
-use Error;
 use FilterInputStream;
 use InputStream;
 use Seekable;
@@ -55,6 +53,7 @@ impl BufferedInputStream {
     }
 }
 
+#[derive(Clone, Default)]
 pub struct BufferedInputStreamBuilder {
     buffer_size: Option<u32>,
     base_stream: Option<InputStream>,
@@ -63,11 +62,7 @@ pub struct BufferedInputStreamBuilder {
 
 impl BufferedInputStreamBuilder {
     pub fn new() -> Self {
-        Self {
-            buffer_size: None,
-            base_stream: None,
-            close_base_stream: None,
-        }
+        Self::default()
     }
 
     pub fn build(self) -> BufferedInputStream {
@@ -92,8 +87,8 @@ impl BufferedInputStreamBuilder {
         self
     }
 
-    pub fn base_stream(mut self, base_stream: &InputStream) -> Self {
-        self.base_stream = Some(base_stream.clone());
+    pub fn base_stream<P: IsA<InputStream>>(mut self, base_stream: &P) -> Self {
+        self.base_stream = Some(base_stream.clone().upcast());
         self
     }
 
@@ -110,9 +105,9 @@ pub trait BufferedInputStreamExt: 'static {
         &self,
         count: isize,
         cancellable: Option<&P>,
-    ) -> Result<isize, Error>;
+    ) -> Result<isize, glib::Error>;
 
-    fn fill_async<P: IsA<Cancellable>, Q: FnOnce(Result<isize, Error>) + Send + 'static>(
+    fn fill_async<P: IsA<Cancellable>, Q: FnOnce(Result<isize, glib::Error>) + Send + 'static>(
         &self,
         count: isize,
         io_priority: glib::Priority,
@@ -120,12 +115,11 @@ pub trait BufferedInputStreamExt: 'static {
         callback: Q,
     );
 
-    #[cfg(feature = "futures")]
     fn fill_async_future(
         &self,
         count: isize,
         io_priority: glib::Priority,
-    ) -> Box_<dyn future::Future<Output = Result<isize, Error>> + std::marker::Unpin>;
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<isize, glib::Error>> + 'static>>;
 
     fn get_available(&self) -> usize;
 
@@ -133,7 +127,7 @@ pub trait BufferedInputStreamExt: 'static {
 
     fn peek_buffer(&self) -> Vec<u8>;
 
-    fn read_byte<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<i32, Error>;
+    fn read_byte<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<i32, glib::Error>;
 
     fn set_buffer_size(&self, size: usize);
 
@@ -145,7 +139,7 @@ impl<O: IsA<BufferedInputStream>> BufferedInputStreamExt for O {
         &self,
         count: isize,
         cancellable: Option<&P>,
-    ) -> Result<isize, Error> {
+    ) -> Result<isize, glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let ret = gio_sys::g_buffered_input_stream_fill(
@@ -162,16 +156,16 @@ impl<O: IsA<BufferedInputStream>> BufferedInputStreamExt for O {
         }
     }
 
-    fn fill_async<P: IsA<Cancellable>, Q: FnOnce(Result<isize, Error>) + Send + 'static>(
+    fn fill_async<P: IsA<Cancellable>, Q: FnOnce(Result<isize, glib::Error>) + Send + 'static>(
         &self,
         count: isize,
         io_priority: glib::Priority,
         cancellable: Option<&P>,
         callback: Q,
     ) {
-        let user_data: Box<Q> = Box::new(callback);
+        let user_data: Box_<Q> = Box_::new(callback);
         unsafe extern "C" fn fill_async_trampoline<
-            Q: FnOnce(Result<isize, Error>) + Send + 'static,
+            Q: FnOnce(Result<isize, glib::Error>) + Send + 'static,
         >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
@@ -188,7 +182,7 @@ impl<O: IsA<BufferedInputStream>> BufferedInputStreamExt for O {
             } else {
                 Err(from_glib_full(error))
             };
-            let callback: Box<Q> = Box::from_raw(user_data as *mut _);
+            let callback: Box_<Q> = Box_::from_raw(user_data as *mut _);
             callback(result);
         }
         let callback = fill_async_trampoline::<Q>;
@@ -199,29 +193,24 @@ impl<O: IsA<BufferedInputStream>> BufferedInputStreamExt for O {
                 io_priority.to_glib(),
                 cancellable.map(|p| p.as_ref()).to_glib_none().0,
                 Some(callback),
-                Box::into_raw(user_data) as *mut _,
+                Box_::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     fn fill_async_future(
         &self,
         count: isize,
         io_priority: glib::Priority,
-    ) -> Box_<dyn future::Future<Output = Result<isize, Error>> + std::marker::Unpin> {
-        use fragile::Fragile;
-        use GioFuture;
-
-        GioFuture::new(self, move |obj, send| {
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<isize, glib::Error>> + 'static>> {
+        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             obj.fill_async(count, io_priority, Some(&cancellable), move |res| {
-                let _ = send.into_inner().send(res);
+                send.resolve(res);
             });
 
             cancellable
-        })
+        }))
     }
 
     fn get_available(&self) -> usize {
@@ -234,19 +223,19 @@ impl<O: IsA<BufferedInputStream>> BufferedInputStreamExt for O {
 
     fn peek_buffer(&self) -> Vec<u8> {
         unsafe {
-            let mut count = mem::uninitialized();
+            let mut count = mem::MaybeUninit::uninit();
             let ret = FromGlibContainer::from_glib_none_num(
                 gio_sys::g_buffered_input_stream_peek_buffer(
                     self.as_ref().to_glib_none().0,
-                    &mut count,
+                    count.as_mut_ptr(),
                 ),
-                count as usize,
+                count.assume_init() as usize,
             );
             ret
         }
     }
 
-    fn read_byte<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<i32, Error> {
+    fn read_byte<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<i32, glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let ret = gio_sys::g_buffered_input_stream_read_byte(

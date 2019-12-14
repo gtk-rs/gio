@@ -2,9 +2,8 @@
 // from gir-files (https://github.com/gtk-rs/gir-files)
 // DO NOT EDIT
 
-#[cfg(feature = "futures")]
-use futures::future;
 use gio_sys;
+use glib;
 use glib::object::Cast;
 use glib::object::IsA;
 use glib::signal::connect_raw;
@@ -15,9 +14,9 @@ use gobject_sys;
 use std::boxed::Box as Box_;
 use std::fmt;
 use std::mem::transmute;
+use std::pin::Pin;
 use std::ptr;
 use Cancellable;
-use Error;
 #[cfg(any(feature = "v2_44", feature = "dox"))]
 use NetworkConnectivity;
 use SocketConnectable;
@@ -43,12 +42,12 @@ pub trait NetworkMonitorExt: 'static {
         &self,
         connectable: &P,
         cancellable: Option<&Q>,
-    ) -> Result<(), Error>;
+    ) -> Result<(), glib::Error>;
 
     fn can_reach_async<
         P: IsA<SocketConnectable>,
         Q: IsA<Cancellable>,
-        R: FnOnce(Result<(), Error>) + Send + 'static,
+        R: FnOnce(Result<(), glib::Error>) + Send + 'static,
     >(
         &self,
         connectable: &P,
@@ -56,11 +55,10 @@ pub trait NetworkMonitorExt: 'static {
         callback: R,
     );
 
-    #[cfg(feature = "futures")]
     fn can_reach_async_future<P: IsA<SocketConnectable> + Clone + 'static>(
         &self,
         connectable: &P,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin>;
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>>;
 
     #[cfg(any(feature = "v2_44", feature = "dox"))]
     fn get_connectivity(&self) -> NetworkConnectivity;
@@ -93,7 +91,7 @@ impl<O: IsA<NetworkMonitor>> NetworkMonitorExt for O {
         &self,
         connectable: &P,
         cancellable: Option<&Q>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let _ = gio_sys::g_network_monitor_can_reach(
@@ -113,16 +111,16 @@ impl<O: IsA<NetworkMonitor>> NetworkMonitorExt for O {
     fn can_reach_async<
         P: IsA<SocketConnectable>,
         Q: IsA<Cancellable>,
-        R: FnOnce(Result<(), Error>) + Send + 'static,
+        R: FnOnce(Result<(), glib::Error>) + Send + 'static,
     >(
         &self,
         connectable: &P,
         cancellable: Option<&Q>,
         callback: R,
     ) {
-        let user_data: Box<R> = Box::new(callback);
+        let user_data: Box_<R> = Box_::new(callback);
         unsafe extern "C" fn can_reach_async_trampoline<
-            R: FnOnce(Result<(), Error>) + Send + 'static,
+            R: FnOnce(Result<(), glib::Error>) + Send + 'static,
         >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
@@ -139,7 +137,7 @@ impl<O: IsA<NetworkMonitor>> NetworkMonitorExt for O {
             } else {
                 Err(from_glib_full(error))
             };
-            let callback: Box<R> = Box::from_raw(user_data as *mut _);
+            let callback: Box_<R> = Box_::from_raw(user_data as *mut _);
             callback(result);
         }
         let callback = can_reach_async_trampoline::<R>;
@@ -149,29 +147,24 @@ impl<O: IsA<NetworkMonitor>> NetworkMonitorExt for O {
                 connectable.as_ref().to_glib_none().0,
                 cancellable.map(|p| p.as_ref()).to_glib_none().0,
                 Some(callback),
-                Box::into_raw(user_data) as *mut _,
+                Box_::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     fn can_reach_async_future<P: IsA<SocketConnectable> + Clone + 'static>(
         &self,
         connectable: &P,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin> {
-        use fragile::Fragile;
-        use GioFuture;
-
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>> {
         let connectable = connectable.clone();
-        GioFuture::new(self, move |obj, send| {
+        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             obj.can_reach_async(&connectable, Some(&cancellable), move |res| {
-                let _ = send.into_inner().send(res);
+                send.resolve(res);
             });
 
             cancellable
-        })
+        }))
     }
 
     #[cfg(any(feature = "v2_44", feature = "dox"))]

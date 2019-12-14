@@ -3,6 +3,7 @@
 // DO NOT EDIT
 
 use gio_sys;
+use glib;
 use glib::object::Cast;
 use glib::object::IsA;
 use glib::signal::connect_raw;
@@ -16,7 +17,6 @@ use std::boxed::Box as Box_;
 use std::fmt;
 use std::mem::transmute;
 use std::ptr;
-use Error;
 use IOStream;
 use TlsAuthenticationMode;
 use TlsCertificate;
@@ -34,7 +34,7 @@ impl TlsServerConnection {
     pub fn new<P: IsA<IOStream>, Q: IsA<TlsCertificate>>(
         base_io_stream: &P,
         certificate: Option<&Q>,
-    ) -> Result<TlsServerConnection, Error> {
+    ) -> Result<TlsServerConnection, glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let ret = gio_sys::g_tls_server_connection_new(
@@ -73,7 +73,10 @@ impl<O: IsA<TlsServerConnection>> TlsServerConnectionExt for O {
                 b"authentication-mode\0".as_ptr() as *const _,
                 value.to_glib_none_mut().0,
             );
-            value.get().unwrap()
+            value
+                .get()
+                .expect("Return Value for property `authentication-mode` getter")
+                .unwrap()
         }
     }
 

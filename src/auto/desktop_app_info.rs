@@ -8,7 +8,11 @@ use glib::object::IsA;
 use glib::translate::*;
 use glib::GString;
 use std;
+use std::boxed::Box as Box_;
 use std::fmt;
+#[cfg(any(feature = "v2_60", feature = "dox"))]
+use std::mem;
+use std::ptr;
 use AppInfo;
 use AppLaunchContext;
 
@@ -78,6 +82,9 @@ pub trait DesktopAppInfoExt: 'static {
 
     fn get_string(&self, key: &str) -> Option<GString>;
 
+    #[cfg(any(feature = "v2_60", feature = "dox"))]
+    fn get_string_list(&self, key: &str) -> Vec<GString>;
+
     fn has_key(&self, key: &str) -> bool;
 
     fn launch_action<P: IsA<AppLaunchContext>>(
@@ -86,10 +93,14 @@ pub trait DesktopAppInfoExt: 'static {
         launch_context: Option<&P>,
     );
 
-    //fn launch_uris_as_manager<P: IsA<AppLaunchContext>>(&self, uris: &[&str], launch_context: Option<&P>, spawn_flags: /*Ignored*/glib::SpawnFlags, user_setup: Option<Box<dyn FnOnce() + 'static>>, pid_callback: /*Unimplemented*/FnMut(&DesktopAppInfo, /*Ignored*/glib::Pid), pid_callback_data: /*Unimplemented*/Option<Fundamental: Pointer>) -> Result<(), Error>;
-
-    //#[cfg(any(feature = "v2_58", feature = "dox"))]
-    //fn launch_uris_as_manager_with_fds<P: IsA<AppLaunchContext>>(&self, uris: &[&str], launch_context: Option<&P>, spawn_flags: /*Ignored*/glib::SpawnFlags, user_setup: Option<Box<dyn FnOnce() + 'static>>, pid_callback: /*Unimplemented*/FnMut(&DesktopAppInfo, /*Ignored*/glib::Pid), pid_callback_data: /*Unimplemented*/Option<Fundamental: Pointer>, stdin_fd: i32, stdout_fd: i32, stderr_fd: i32) -> Result<(), Error>;
+    fn launch_uris_as_manager<P: IsA<AppLaunchContext>>(
+        &self,
+        uris: &[&str],
+        launch_context: Option<&P>,
+        spawn_flags: glib::SpawnFlags,
+        user_setup: Option<Box_<dyn FnOnce() + 'static>>,
+        pid_callback: Option<&mut dyn (FnMut(&DesktopAppInfo, glib::Pid))>,
+    ) -> Result<(), glib::Error>;
 
     fn list_actions(&self) -> Vec<GString>;
 }
@@ -197,6 +208,22 @@ impl<O: IsA<DesktopAppInfo>> DesktopAppInfoExt for O {
         }
     }
 
+    #[cfg(any(feature = "v2_60", feature = "dox"))]
+    fn get_string_list(&self, key: &str) -> Vec<GString> {
+        unsafe {
+            let mut length = mem::MaybeUninit::uninit();
+            let ret = FromGlibContainer::from_glib_full_num(
+                gio_sys::g_desktop_app_info_get_string_list(
+                    self.as_ref().to_glib_none().0,
+                    key.to_glib_none().0,
+                    length.as_mut_ptr(),
+                ),
+                length.assume_init() as usize,
+            );
+            ret
+        }
+    }
+
     fn has_key(&self, key: &str) -> bool {
         unsafe {
             from_glib(gio_sys::g_desktop_app_info_has_key(
@@ -220,14 +247,73 @@ impl<O: IsA<DesktopAppInfo>> DesktopAppInfoExt for O {
         }
     }
 
-    //fn launch_uris_as_manager<P: IsA<AppLaunchContext>>(&self, uris: &[&str], launch_context: Option<&P>, spawn_flags: /*Ignored*/glib::SpawnFlags, user_setup: Option<Box<dyn FnOnce() + 'static>>, pid_callback: /*Unimplemented*/FnMut(&DesktopAppInfo, /*Ignored*/glib::Pid), pid_callback_data: /*Unimplemented*/Option<Fundamental: Pointer>) -> Result<(), Error> {
-    //    unsafe { TODO: call gio_sys:g_desktop_app_info_launch_uris_as_manager() }
-    //}
-
-    //#[cfg(any(feature = "v2_58", feature = "dox"))]
-    //fn launch_uris_as_manager_with_fds<P: IsA<AppLaunchContext>>(&self, uris: &[&str], launch_context: Option<&P>, spawn_flags: /*Ignored*/glib::SpawnFlags, user_setup: Option<Box<dyn FnOnce() + 'static>>, pid_callback: /*Unimplemented*/FnMut(&DesktopAppInfo, /*Ignored*/glib::Pid), pid_callback_data: /*Unimplemented*/Option<Fundamental: Pointer>, stdin_fd: i32, stdout_fd: i32, stderr_fd: i32) -> Result<(), Error> {
-    //    unsafe { TODO: call gio_sys:g_desktop_app_info_launch_uris_as_manager_with_fds() }
-    //}
+    fn launch_uris_as_manager<P: IsA<AppLaunchContext>>(
+        &self,
+        uris: &[&str],
+        launch_context: Option<&P>,
+        spawn_flags: glib::SpawnFlags,
+        user_setup: Option<Box_<dyn FnOnce() + 'static>>,
+        pid_callback: Option<&mut dyn (FnMut(&DesktopAppInfo, glib::Pid))>,
+    ) -> Result<(), glib::Error> {
+        let user_setup_data: Box_<Option<Box_<dyn FnOnce() + 'static>>> = Box_::new(user_setup);
+        unsafe extern "C" fn user_setup_func<P: IsA<AppLaunchContext>>(
+            user_data: glib_sys::gpointer,
+        ) {
+            let callback: Box_<Option<Box_<dyn FnOnce() + 'static>>> =
+                Box_::from_raw(user_data as *mut _);
+            let callback = (*callback).expect("cannot get closure...");
+            callback()
+        }
+        let user_setup = if user_setup_data.is_some() {
+            Some(user_setup_func::<P> as _)
+        } else {
+            None
+        };
+        let pid_callback_data: Option<&mut dyn (FnMut(&DesktopAppInfo, glib::Pid))> = pid_callback;
+        unsafe extern "C" fn pid_callback_func<P: IsA<AppLaunchContext>>(
+            appinfo: *mut gio_sys::GDesktopAppInfo,
+            pid: glib_sys::GPid,
+            user_data: glib_sys::gpointer,
+        ) {
+            let appinfo = from_glib_borrow(appinfo);
+            let pid = from_glib(pid);
+            let callback: *mut Option<&mut dyn (FnMut(&DesktopAppInfo, glib::Pid))> =
+                user_data as *const _ as usize
+                    as *mut Option<&mut dyn (FnMut(&DesktopAppInfo, glib::Pid))>;
+            if let Some(ref mut callback) = *callback {
+                callback(&appinfo, pid)
+            } else {
+                panic!("cannot get closure...")
+            };
+        }
+        let pid_callback = if pid_callback_data.is_some() {
+            Some(pid_callback_func::<P> as _)
+        } else {
+            None
+        };
+        let super_callback0: Box_<Option<Box_<dyn FnOnce() + 'static>>> = user_setup_data;
+        let super_callback1: &Option<&mut dyn (FnMut(&DesktopAppInfo, glib::Pid))> =
+            &pid_callback_data;
+        unsafe {
+            let mut error = ptr::null_mut();
+            let _ = gio_sys::g_desktop_app_info_launch_uris_as_manager(
+                self.as_ref().to_glib_none().0,
+                uris.to_glib_none().0,
+                launch_context.map(|p| p.as_ref()).to_glib_none().0,
+                spawn_flags.to_glib(),
+                user_setup,
+                Box_::into_raw(super_callback0) as *mut _,
+                pid_callback,
+                super_callback1 as *const _ as usize as *mut _,
+                &mut error,
+            );
+            if error.is_null() {
+                Ok(())
+            } else {
+                Err(from_glib_full(error))
+            }
+        }
+    }
 
     fn list_actions(&self) -> Vec<GString> {
         unsafe {

@@ -3,12 +3,13 @@
 // DO NOT EDIT
 
 use gio_sys;
+use glib;
 use glib::translate::*;
 use std;
+#[cfg(any(unix, feature = "dox"))]
 use std::boxed::Box as Box_;
 use std::fmt;
 use std::ptr;
-use Error;
 use Subprocess;
 use SubprocessFlags;
 
@@ -36,7 +37,7 @@ impl SubprocessLauncher {
 
     #[cfg(any(unix, feature = "dox"))]
     pub fn set_child_setup<P: Fn() + 'static>(&self, child_setup: P) {
-        let child_setup_data: Box_<P> = Box::new(child_setup);
+        let child_setup_data: Box_<P> = Box_::new(child_setup);
         unsafe extern "C" fn child_setup_func<P: Fn() + 'static>(user_data: glib_sys::gpointer) {
             let callback: &P = &*(user_data as *mut _);
             (*callback)();
@@ -51,7 +52,7 @@ impl SubprocessLauncher {
             gio_sys::g_subprocess_launcher_set_child_setup(
                 self.to_glib_none().0,
                 child_setup,
-                Box::into_raw(super_callback0) as *mut _,
+                Box_::into_raw(super_callback0) as *mut _,
                 destroy_call3,
             );
         }
@@ -124,11 +125,11 @@ impl SubprocessLauncher {
         }
     }
 
-    //pub fn spawn(&self, error: &mut Error, argv0: &str, : /*Unknown conversion*//*Unimplemented*/Fundamental: VarArgs) -> Option<Subprocess> {
+    //pub fn spawn(&self, error: &mut glib::Error, argv0: &str, : /*Unknown conversion*//*Unimplemented*/Fundamental: VarArgs) -> Option<Subprocess> {
     //    unsafe { TODO: call gio_sys:g_subprocess_launcher_spawn() }
     //}
 
-    pub fn spawnv(&self, argv: &[&std::ffi::OsStr]) -> Result<Subprocess, Error> {
+    pub fn spawnv(&self, argv: &[&std::ffi::OsStr]) -> Result<Subprocess, glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let ret = gio_sys::g_subprocess_launcher_spawnv(

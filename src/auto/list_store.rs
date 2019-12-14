@@ -5,10 +5,14 @@
 use gio_sys;
 #[cfg(any(feature = "v2_44", feature = "dox"))]
 use glib;
+#[cfg(any(feature = "v2_44", feature = "dox"))]
 use glib::object::Cast;
+#[cfg(any(feature = "v2_44", feature = "dox"))]
 use glib::object::IsA;
 use glib::translate::*;
+#[cfg(any(feature = "v2_44", feature = "dox"))]
 use glib::StaticType;
+#[cfg(any(feature = "v2_44", feature = "dox"))]
 use glib::ToValue;
 use std::fmt;
 use ListModel;
@@ -28,6 +32,7 @@ impl ListStore {
     }
 }
 
+#[derive(Clone, Default)]
 pub struct ListStoreBuilder {
     #[cfg(any(feature = "v2_44", feature = "dox"))]
     item_type: Option<glib::types::Type>,
@@ -35,10 +40,7 @@ pub struct ListStoreBuilder {
 
 impl ListStoreBuilder {
     pub fn new() -> Self {
-        Self {
-            #[cfg(any(feature = "v2_44", feature = "dox"))]
-            item_type: None,
-        }
+        Self::default()
     }
 
     pub fn build(self) -> ListStore {
@@ -71,17 +73,11 @@ pub trait ListStoreExt: 'static {
     #[cfg(any(feature = "v2_44", feature = "dox"))]
     fn insert<P: IsA<glib::Object>>(&self, position: u32, item: &P);
 
-    //#[cfg(any(feature = "v2_44", feature = "dox"))]
-    //fn insert_sorted<P: IsA<glib::Object>>(&self, item: &P, compare_func: /*Unimplemented*/FnMut(/*Unimplemented*/Option<Fundamental: Pointer>, /*Unimplemented*/Option<Fundamental: Pointer>) -> i32, user_data: /*Unimplemented*/Option<Fundamental: Pointer>) -> u32;
-
     #[cfg(any(feature = "v2_44", feature = "dox"))]
     fn remove(&self, position: u32);
 
     #[cfg(any(feature = "v2_44", feature = "dox"))]
     fn remove_all(&self);
-
-    //#[cfg(any(feature = "v2_46", feature = "dox"))]
-    //fn sort(&self, compare_func: /*Unimplemented*/FnMut(/*Unimplemented*/Option<Fundamental: Pointer>, /*Unimplemented*/Option<Fundamental: Pointer>) -> i32, user_data: /*Unimplemented*/Option<Fundamental: Pointer>);
 
     #[cfg(any(feature = "v2_44", feature = "dox"))]
     fn splice(&self, position: u32, n_removals: u32, additions: &[glib::Object]);
@@ -109,11 +105,6 @@ impl<O: IsA<ListStore>> ListStoreExt for O {
         }
     }
 
-    //#[cfg(any(feature = "v2_44", feature = "dox"))]
-    //fn insert_sorted<P: IsA<glib::Object>>(&self, item: &P, compare_func: /*Unimplemented*/FnMut(/*Unimplemented*/Option<Fundamental: Pointer>, /*Unimplemented*/Option<Fundamental: Pointer>) -> i32, user_data: /*Unimplemented*/Option<Fundamental: Pointer>) -> u32 {
-    //    unsafe { TODO: call gio_sys:g_list_store_insert_sorted() }
-    //}
-
     #[cfg(any(feature = "v2_44", feature = "dox"))]
     fn remove(&self, position: u32) {
         unsafe {
@@ -127,11 +118,6 @@ impl<O: IsA<ListStore>> ListStoreExt for O {
             gio_sys::g_list_store_remove_all(self.as_ref().to_glib_none().0);
         }
     }
-
-    //#[cfg(any(feature = "v2_46", feature = "dox"))]
-    //fn sort(&self, compare_func: /*Unimplemented*/FnMut(/*Unimplemented*/Option<Fundamental: Pointer>, /*Unimplemented*/Option<Fundamental: Pointer>) -> i32, user_data: /*Unimplemented*/Option<Fundamental: Pointer>) {
-    //    unsafe { TODO: call gio_sys:g_list_store_sort() }
-    //}
 
     #[cfg(any(feature = "v2_44", feature = "dox"))]
     fn splice(&self, position: u32, n_removals: u32, additions: &[glib::Object]) {

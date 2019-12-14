@@ -2,9 +2,8 @@
 // from gir-files (https://github.com/gtk-rs/gir-files)
 // DO NOT EDIT
 
-#[cfg(feature = "futures")]
-use futures::future;
 use gio_sys;
+use glib;
 use glib::object::Cast;
 use glib::object::IsA;
 use glib::signal::connect_raw;
@@ -15,9 +14,9 @@ use gobject_sys;
 use std::boxed::Box as Box_;
 use std::fmt;
 use std::mem::transmute;
+use std::pin::Pin;
 use std::ptr;
 use Cancellable;
-use Error;
 
 glib_wrapper! {
     pub struct Permission(Object<gio_sys::GPermission, gio_sys::GPermissionClass, PermissionClass>);
@@ -30,18 +29,17 @@ glib_wrapper! {
 pub const NONE_PERMISSION: Option<&Permission> = None;
 
 pub trait PermissionExt: 'static {
-    fn acquire<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), Error>;
+    fn acquire<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), glib::Error>;
 
-    fn acquire_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), Error>) + Send + 'static>(
+    fn acquire_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), glib::Error>) + Send + 'static>(
         &self,
         cancellable: Option<&P>,
         callback: Q,
     );
 
-    #[cfg(feature = "futures")]
     fn acquire_async_future(
         &self,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin>;
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>>;
 
     fn get_allowed(&self) -> bool;
 
@@ -51,18 +49,17 @@ pub trait PermissionExt: 'static {
 
     fn impl_update(&self, allowed: bool, can_acquire: bool, can_release: bool);
 
-    fn release<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), Error>;
+    fn release<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), glib::Error>;
 
-    fn release_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), Error>) + Send + 'static>(
+    fn release_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), glib::Error>) + Send + 'static>(
         &self,
         cancellable: Option<&P>,
         callback: Q,
     );
 
-    #[cfg(feature = "futures")]
     fn release_async_future(
         &self,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin>;
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>>;
 
     fn connect_property_allowed_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
 
@@ -72,7 +69,7 @@ pub trait PermissionExt: 'static {
 }
 
 impl<O: IsA<Permission>> PermissionExt for O {
-    fn acquire<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), Error> {
+    fn acquire<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let _ = gio_sys::g_permission_acquire(
@@ -88,14 +85,14 @@ impl<O: IsA<Permission>> PermissionExt for O {
         }
     }
 
-    fn acquire_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), Error>) + Send + 'static>(
+    fn acquire_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), glib::Error>) + Send + 'static>(
         &self,
         cancellable: Option<&P>,
         callback: Q,
     ) {
-        let user_data: Box<Q> = Box::new(callback);
+        let user_data: Box_<Q> = Box_::new(callback);
         unsafe extern "C" fn acquire_async_trampoline<
-            Q: FnOnce(Result<(), Error>) + Send + 'static,
+            Q: FnOnce(Result<(), glib::Error>) + Send + 'static,
         >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
@@ -108,7 +105,7 @@ impl<O: IsA<Permission>> PermissionExt for O {
             } else {
                 Err(from_glib_full(error))
             };
-            let callback: Box<Q> = Box::from_raw(user_data as *mut _);
+            let callback: Box_<Q> = Box_::from_raw(user_data as *mut _);
             callback(result);
         }
         let callback = acquire_async_trampoline::<Q>;
@@ -117,27 +114,22 @@ impl<O: IsA<Permission>> PermissionExt for O {
                 self.as_ref().to_glib_none().0,
                 cancellable.map(|p| p.as_ref()).to_glib_none().0,
                 Some(callback),
-                Box::into_raw(user_data) as *mut _,
+                Box_::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     fn acquire_async_future(
         &self,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin> {
-        use fragile::Fragile;
-        use GioFuture;
-
-        GioFuture::new(self, move |obj, send| {
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>> {
+        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             obj.acquire_async(Some(&cancellable), move |res| {
-                let _ = send.into_inner().send(res);
+                send.resolve(res);
             });
 
             cancellable
-        })
+        }))
     }
 
     fn get_allowed(&self) -> bool {
@@ -175,7 +167,7 @@ impl<O: IsA<Permission>> PermissionExt for O {
         }
     }
 
-    fn release<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), Error> {
+    fn release<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let _ = gio_sys::g_permission_release(
@@ -191,14 +183,14 @@ impl<O: IsA<Permission>> PermissionExt for O {
         }
     }
 
-    fn release_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), Error>) + Send + 'static>(
+    fn release_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), glib::Error>) + Send + 'static>(
         &self,
         cancellable: Option<&P>,
         callback: Q,
     ) {
-        let user_data: Box<Q> = Box::new(callback);
+        let user_data: Box_<Q> = Box_::new(callback);
         unsafe extern "C" fn release_async_trampoline<
-            Q: FnOnce(Result<(), Error>) + Send + 'static,
+            Q: FnOnce(Result<(), glib::Error>) + Send + 'static,
         >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
@@ -211,7 +203,7 @@ impl<O: IsA<Permission>> PermissionExt for O {
             } else {
                 Err(from_glib_full(error))
             };
-            let callback: Box<Q> = Box::from_raw(user_data as *mut _);
+            let callback: Box_<Q> = Box_::from_raw(user_data as *mut _);
             callback(result);
         }
         let callback = release_async_trampoline::<Q>;
@@ -220,27 +212,22 @@ impl<O: IsA<Permission>> PermissionExt for O {
                 self.as_ref().to_glib_none().0,
                 cancellable.map(|p| p.as_ref()).to_glib_none().0,
                 Some(callback),
-                Box::into_raw(user_data) as *mut _,
+                Box_::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     fn release_async_future(
         &self,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin> {
-        use fragile::Fragile;
-        use GioFuture;
-
-        GioFuture::new(self, move |obj, send| {
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>> {
+        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             obj.release_async(Some(&cancellable), move |res| {
-                let _ = send.into_inner().send(res);
+                send.resolve(res);
             });
 
             cancellable
-        })
+        }))
     }
 
     fn connect_property_allowed_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId {

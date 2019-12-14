@@ -2,10 +2,8 @@
 // from gir-files (https://github.com/gtk-rs/gir-files)
 // DO NOT EDIT
 
-#[cfg(feature = "futures")]
-#[cfg(any(feature = "v2_50", feature = "dox"))]
-use futures::future;
 use gio_sys;
+use glib;
 use glib::object::IsA;
 use glib::translate::*;
 use glib::GString;
@@ -14,16 +12,16 @@ use glib_sys;
 #[cfg(any(feature = "v2_50", feature = "dox"))]
 use gobject_sys;
 use std;
-#[cfg(feature = "futures")]
 #[cfg(any(feature = "v2_50", feature = "dox"))]
 use std::boxed::Box as Box_;
 use std::fmt;
+#[cfg(any(feature = "v2_50", feature = "dox"))]
+use std::pin::Pin;
 use std::ptr;
 use AppInfoCreateFlags;
 use AppLaunchContext;
 #[cfg(any(feature = "v2_50", feature = "dox"))]
 use Cancellable;
-use Error;
 use File;
 use Icon;
 
@@ -40,7 +38,7 @@ impl AppInfo {
         commandline: P,
         application_name: Option<&str>,
         flags: AppInfoCreateFlags,
-    ) -> Result<AppInfo, Error> {
+    ) -> Result<AppInfo, glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let ret = gio_sys::g_app_info_create_from_commandline(
@@ -105,7 +103,7 @@ impl AppInfo {
     pub fn launch_default_for_uri<P: IsA<AppLaunchContext>>(
         uri: &str,
         context: Option<&P>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let _ = gio_sys::g_app_info_launch_default_for_uri(
@@ -125,16 +123,16 @@ impl AppInfo {
     pub fn launch_default_for_uri_async<
         P: IsA<AppLaunchContext>,
         Q: IsA<Cancellable>,
-        R: FnOnce(Result<(), Error>) + Send + 'static,
+        R: FnOnce(Result<(), glib::Error>) + Send + 'static,
     >(
         uri: &str,
         context: Option<&P>,
         cancellable: Option<&Q>,
         callback: R,
     ) {
-        let user_data: Box<R> = Box::new(callback);
+        let user_data: Box_<R> = Box_::new(callback);
         unsafe extern "C" fn launch_default_for_uri_async_trampoline<
-            R: FnOnce(Result<(), Error>) + Send + 'static,
+            R: FnOnce(Result<(), glib::Error>) + Send + 'static,
         >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
@@ -147,7 +145,7 @@ impl AppInfo {
             } else {
                 Err(from_glib_full(error))
             };
-            let callback: Box<R> = Box::from_raw(user_data as *mut _);
+            let callback: Box_<R> = Box_::from_raw(user_data as *mut _);
             callback(result);
         }
         let callback = launch_default_for_uri_async_trampoline::<R>;
@@ -157,36 +155,31 @@ impl AppInfo {
                 context.map(|p| p.as_ref()).to_glib_none().0,
                 cancellable.map(|p| p.as_ref()).to_glib_none().0,
                 Some(callback),
-                Box::into_raw(user_data) as *mut _,
+                Box_::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     #[cfg(any(feature = "v2_50", feature = "dox"))]
     pub fn launch_default_for_uri_async_future<P: IsA<AppLaunchContext> + Clone + 'static>(
         uri: &str,
         context: Option<&P>,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin> {
-        use fragile::Fragile;
-        use GioFuture;
-
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>> {
         let uri = String::from(uri);
         let context = context.map(ToOwned::to_owned);
-        GioFuture::new(&(), move |_obj, send| {
+        Box_::pin(crate::GioFuture::new(&(), move |_obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             Self::launch_default_for_uri_async(
                 &uri,
                 context.as_ref().map(::std::borrow::Borrow::borrow),
                 Some(&cancellable),
                 move |res| {
-                    let _ = send.into_inner().send(res);
+                    send.resolve(res);
                 },
             );
 
             cancellable
-        })
+        }))
     }
 
     pub fn reset_type_associations(content_type: &str) {
@@ -199,7 +192,7 @@ impl AppInfo {
 pub const NONE_APP_INFO: Option<&AppInfo> = None;
 
 pub trait AppInfoExt: 'static {
-    fn add_supports_type(&self, content_type: &str) -> Result<(), Error>;
+    fn add_supports_type(&self, content_type: &str) -> Result<(), glib::Error>;
 
     fn can_delete(&self) -> bool;
 
@@ -231,24 +224,24 @@ pub trait AppInfoExt: 'static {
         &self,
         files: &[File],
         context: Option<&P>,
-    ) -> Result<(), Error>;
+    ) -> Result<(), glib::Error>;
 
     fn launch_uris<P: IsA<AppLaunchContext>>(
         &self,
         uris: &[&str],
         context: Option<&P>,
-    ) -> Result<(), Error>;
+    ) -> Result<(), glib::Error>;
 
-    fn remove_supports_type(&self, content_type: &str) -> Result<(), Error>;
+    fn remove_supports_type(&self, content_type: &str) -> Result<(), glib::Error>;
 
     fn set_as_default_for_extension<P: AsRef<std::path::Path>>(
         &self,
         extension: P,
-    ) -> Result<(), Error>;
+    ) -> Result<(), glib::Error>;
 
-    fn set_as_default_for_type(&self, content_type: &str) -> Result<(), Error>;
+    fn set_as_default_for_type(&self, content_type: &str) -> Result<(), glib::Error>;
 
-    fn set_as_last_used_for_type(&self, content_type: &str) -> Result<(), Error>;
+    fn set_as_last_used_for_type(&self, content_type: &str) -> Result<(), glib::Error>;
 
     fn should_show(&self) -> bool;
 
@@ -258,7 +251,7 @@ pub trait AppInfoExt: 'static {
 }
 
 impl<O: IsA<AppInfo>> AppInfoExt for O {
-    fn add_supports_type(&self, content_type: &str) -> Result<(), Error> {
+    fn add_supports_type(&self, content_type: &str) -> Result<(), glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let _ = gio_sys::g_app_info_add_supports_type(
@@ -363,7 +356,7 @@ impl<O: IsA<AppInfo>> AppInfoExt for O {
         &self,
         files: &[File],
         context: Option<&P>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let _ = gio_sys::g_app_info_launch(
@@ -384,7 +377,7 @@ impl<O: IsA<AppInfo>> AppInfoExt for O {
         &self,
         uris: &[&str],
         context: Option<&P>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let _ = gio_sys::g_app_info_launch_uris(
@@ -401,7 +394,7 @@ impl<O: IsA<AppInfo>> AppInfoExt for O {
         }
     }
 
-    fn remove_supports_type(&self, content_type: &str) -> Result<(), Error> {
+    fn remove_supports_type(&self, content_type: &str) -> Result<(), glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let _ = gio_sys::g_app_info_remove_supports_type(
@@ -420,7 +413,7 @@ impl<O: IsA<AppInfo>> AppInfoExt for O {
     fn set_as_default_for_extension<P: AsRef<std::path::Path>>(
         &self,
         extension: P,
-    ) -> Result<(), Error> {
+    ) -> Result<(), glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let _ = gio_sys::g_app_info_set_as_default_for_extension(
@@ -436,7 +429,7 @@ impl<O: IsA<AppInfo>> AppInfoExt for O {
         }
     }
 
-    fn set_as_default_for_type(&self, content_type: &str) -> Result<(), Error> {
+    fn set_as_default_for_type(&self, content_type: &str) -> Result<(), glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let _ = gio_sys::g_app_info_set_as_default_for_type(
@@ -452,7 +445,7 @@ impl<O: IsA<AppInfo>> AppInfoExt for O {
         }
     }
 
-    fn set_as_last_used_for_type(&self, content_type: &str) -> Result<(), Error> {
+    fn set_as_last_used_for_type(&self, content_type: &str) -> Result<(), glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let _ = gio_sys::g_app_info_set_as_last_used_for_type(

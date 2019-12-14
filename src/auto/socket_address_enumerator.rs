@@ -2,19 +2,17 @@
 // from gir-files (https://github.com/gtk-rs/gir-files)
 // DO NOT EDIT
 
-#[cfg(feature = "futures")]
-use futures::future;
 use gio_sys;
+use glib;
 use glib::object::IsA;
 use glib::translate::*;
 use glib_sys;
 use gobject_sys;
-#[cfg(feature = "futures")]
 use std::boxed::Box as Box_;
 use std::fmt;
+use std::pin::Pin;
 use std::ptr;
 use Cancellable;
-use Error;
 use SocketAddress;
 
 glib_wrapper! {
@@ -28,22 +26,30 @@ glib_wrapper! {
 pub const NONE_SOCKET_ADDRESS_ENUMERATOR: Option<&SocketAddressEnumerator> = None;
 
 pub trait SocketAddressEnumeratorExt: 'static {
-    fn next<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<SocketAddress, Error>;
+    fn next<P: IsA<Cancellable>>(
+        &self,
+        cancellable: Option<&P>,
+    ) -> Result<SocketAddress, glib::Error>;
 
-    fn next_async<P: IsA<Cancellable>, Q: FnOnce(Result<SocketAddress, Error>) + Send + 'static>(
+    fn next_async<
+        P: IsA<Cancellable>,
+        Q: FnOnce(Result<SocketAddress, glib::Error>) + Send + 'static,
+    >(
         &self,
         cancellable: Option<&P>,
         callback: Q,
     );
 
-    #[cfg(feature = "futures")]
     fn next_async_future(
         &self,
-    ) -> Box_<dyn future::Future<Output = Result<SocketAddress, Error>> + std::marker::Unpin>;
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<SocketAddress, glib::Error>> + 'static>>;
 }
 
 impl<O: IsA<SocketAddressEnumerator>> SocketAddressEnumeratorExt for O {
-    fn next<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<SocketAddress, Error> {
+    fn next<P: IsA<Cancellable>>(
+        &self,
+        cancellable: Option<&P>,
+    ) -> Result<SocketAddress, glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let ret = gio_sys::g_socket_address_enumerator_next(
@@ -59,14 +65,17 @@ impl<O: IsA<SocketAddressEnumerator>> SocketAddressEnumeratorExt for O {
         }
     }
 
-    fn next_async<P: IsA<Cancellable>, Q: FnOnce(Result<SocketAddress, Error>) + Send + 'static>(
+    fn next_async<
+        P: IsA<Cancellable>,
+        Q: FnOnce(Result<SocketAddress, glib::Error>) + Send + 'static,
+    >(
         &self,
         cancellable: Option<&P>,
         callback: Q,
     ) {
-        let user_data: Box<Q> = Box::new(callback);
+        let user_data: Box_<Q> = Box_::new(callback);
         unsafe extern "C" fn next_async_trampoline<
-            Q: FnOnce(Result<SocketAddress, Error>) + Send + 'static,
+            Q: FnOnce(Result<SocketAddress, glib::Error>) + Send + 'static,
         >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
@@ -83,7 +92,7 @@ impl<O: IsA<SocketAddressEnumerator>> SocketAddressEnumeratorExt for O {
             } else {
                 Err(from_glib_full(error))
             };
-            let callback: Box<Q> = Box::from_raw(user_data as *mut _);
+            let callback: Box_<Q> = Box_::from_raw(user_data as *mut _);
             callback(result);
         }
         let callback = next_async_trampoline::<Q>;
@@ -92,27 +101,23 @@ impl<O: IsA<SocketAddressEnumerator>> SocketAddressEnumeratorExt for O {
                 self.as_ref().to_glib_none().0,
                 cancellable.map(|p| p.as_ref()).to_glib_none().0,
                 Some(callback),
-                Box::into_raw(user_data) as *mut _,
+                Box_::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     fn next_async_future(
         &self,
-    ) -> Box_<dyn future::Future<Output = Result<SocketAddress, Error>> + std::marker::Unpin> {
-        use fragile::Fragile;
-        use GioFuture;
-
-        GioFuture::new(self, move |obj, send| {
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<SocketAddress, glib::Error>> + 'static>>
+    {
+        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             obj.next_async(Some(&cancellable), move |res| {
-                let _ = send.into_inner().send(res);
+                send.resolve(res);
             });
 
             cancellable
-        })
+        }))
     }
 }
 

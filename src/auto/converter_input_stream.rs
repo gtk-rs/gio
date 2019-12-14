@@ -37,6 +37,7 @@ impl ConverterInputStream {
     }
 }
 
+#[derive(Clone, Default)]
 pub struct ConverterInputStreamBuilder {
     converter: Option<Converter>,
     base_stream: Option<InputStream>,
@@ -45,11 +46,7 @@ pub struct ConverterInputStreamBuilder {
 
 impl ConverterInputStreamBuilder {
     pub fn new() -> Self {
-        Self {
-            converter: None,
-            base_stream: None,
-            close_base_stream: None,
-        }
+        Self::default()
     }
 
     pub fn build(self) -> ConverterInputStream {
@@ -69,13 +66,13 @@ impl ConverterInputStreamBuilder {
             .expect("downcast")
     }
 
-    pub fn converter(mut self, converter: &Converter) -> Self {
-        self.converter = Some(converter.clone());
+    pub fn converter<P: IsA<Converter>>(mut self, converter: &P) -> Self {
+        self.converter = Some(converter.clone().upcast());
         self
     }
 
-    pub fn base_stream(mut self, base_stream: &InputStream) -> Self {
-        self.base_stream = Some(base_stream.clone());
+    pub fn base_stream<P: IsA<InputStream>>(mut self, base_stream: &P) -> Self {
+        self.base_stream = Some(base_stream.clone().upcast());
         self
     }
 

@@ -2,8 +2,6 @@
 // from gir-files (https://github.com/gtk-rs/gir-files)
 // DO NOT EDIT
 
-#[cfg(feature = "futures")]
-use futures::future;
 use gio_sys;
 use glib;
 use glib::object::Cast;
@@ -11,6 +9,8 @@ use glib::object::IsA;
 use glib::signal::connect_raw;
 use glib::signal::SignalHandlerId;
 use glib::translate::*;
+#[cfg(any(feature = "v2_60", feature = "dox"))]
+use glib::GString;
 use glib::StaticType;
 use glib::Value;
 use glib_sys;
@@ -18,9 +18,9 @@ use gobject_sys;
 use std::boxed::Box as Box_;
 use std::fmt;
 use std::mem::transmute;
+use std::pin::Pin;
 use std::ptr;
 use Cancellable;
-use Error;
 use IOStream;
 use TlsCertificate;
 use TlsCertificateFlags;
@@ -51,28 +51,34 @@ pub trait TlsConnectionExt: 'static {
 
     fn get_interaction(&self) -> Option<TlsInteraction>;
 
+    #[cfg(any(feature = "v2_60", feature = "dox"))]
+    fn get_negotiated_protocol(&self) -> Option<GString>;
+
     fn get_peer_certificate(&self) -> Option<TlsCertificate>;
 
     fn get_peer_certificate_errors(&self) -> TlsCertificateFlags;
 
+    #[cfg_attr(feature = "v2_60", deprecated)]
     fn get_rehandshake_mode(&self) -> TlsRehandshakeMode;
 
     fn get_require_close_notify(&self) -> bool;
 
-    fn handshake<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), Error>;
+    fn handshake<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), glib::Error>;
 
-    fn handshake_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), Error>) + Send + 'static>(
+    fn handshake_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), glib::Error>) + Send + 'static>(
         &self,
         io_priority: glib::Priority,
         cancellable: Option<&P>,
         callback: Q,
     );
 
-    #[cfg(feature = "futures")]
     fn handshake_async_future(
         &self,
         io_priority: glib::Priority,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin>;
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>>;
+
+    #[cfg(any(feature = "v2_60", feature = "dox"))]
+    fn set_advertised_protocols(&self, protocols: &[&str]);
 
     fn set_certificate<P: IsA<TlsCertificate>>(&self, certificate: &P);
 
@@ -80,9 +86,13 @@ pub trait TlsConnectionExt: 'static {
 
     fn set_interaction<P: IsA<TlsInteraction>>(&self, interaction: Option<&P>);
 
+    #[cfg_attr(feature = "v2_60", deprecated)]
     fn set_rehandshake_mode(&self, mode: TlsRehandshakeMode);
 
     fn set_require_close_notify(&self, require_close_notify: bool);
+
+    #[cfg(any(feature = "v2_60", feature = "dox"))]
+    fn get_property_advertised_protocols(&self) -> Vec<GString>;
 
     fn get_property_base_io_stream(&self) -> Option<IOStream>;
 
@@ -93,11 +103,23 @@ pub trait TlsConnectionExt: 'static {
         f: F,
     ) -> SignalHandlerId;
 
+    #[cfg(any(feature = "v2_60", feature = "dox"))]
+    fn connect_property_advertised_protocols_notify<F: Fn(&Self) + 'static>(
+        &self,
+        f: F,
+    ) -> SignalHandlerId;
+
     fn connect_property_certificate_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
 
     fn connect_property_database_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
 
     fn connect_property_interaction_notify<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
+
+    #[cfg(any(feature = "v2_60", feature = "dox"))]
+    fn connect_property_negotiated_protocol_notify<F: Fn(&Self) + 'static>(
+        &self,
+        f: F,
+    ) -> SignalHandlerId;
 
     fn connect_property_peer_certificate_notify<F: Fn(&Self) + 'static>(
         &self,
@@ -159,6 +181,15 @@ impl<O: IsA<TlsConnection>> TlsConnectionExt for O {
         }
     }
 
+    #[cfg(any(feature = "v2_60", feature = "dox"))]
+    fn get_negotiated_protocol(&self) -> Option<GString> {
+        unsafe {
+            from_glib_none(gio_sys::g_tls_connection_get_negotiated_protocol(
+                self.as_ref().to_glib_none().0,
+            ))
+        }
+    }
+
     fn get_peer_certificate(&self) -> Option<TlsCertificate> {
         unsafe {
             from_glib_none(gio_sys::g_tls_connection_get_peer_certificate(
@@ -191,7 +222,7 @@ impl<O: IsA<TlsConnection>> TlsConnectionExt for O {
         }
     }
 
-    fn handshake<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), Error> {
+    fn handshake<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let _ = gio_sys::g_tls_connection_handshake(
@@ -207,15 +238,15 @@ impl<O: IsA<TlsConnection>> TlsConnectionExt for O {
         }
     }
 
-    fn handshake_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), Error>) + Send + 'static>(
+    fn handshake_async<P: IsA<Cancellable>, Q: FnOnce(Result<(), glib::Error>) + Send + 'static>(
         &self,
         io_priority: glib::Priority,
         cancellable: Option<&P>,
         callback: Q,
     ) {
-        let user_data: Box<Q> = Box::new(callback);
+        let user_data: Box_<Q> = Box_::new(callback);
         unsafe extern "C" fn handshake_async_trampoline<
-            Q: FnOnce(Result<(), Error>) + Send + 'static,
+            Q: FnOnce(Result<(), glib::Error>) + Send + 'static,
         >(
             _source_object: *mut gobject_sys::GObject,
             res: *mut gio_sys::GAsyncResult,
@@ -232,7 +263,7 @@ impl<O: IsA<TlsConnection>> TlsConnectionExt for O {
             } else {
                 Err(from_glib_full(error))
             };
-            let callback: Box<Q> = Box::from_raw(user_data as *mut _);
+            let callback: Box_<Q> = Box_::from_raw(user_data as *mut _);
             callback(result);
         }
         let callback = handshake_async_trampoline::<Q>;
@@ -242,28 +273,33 @@ impl<O: IsA<TlsConnection>> TlsConnectionExt for O {
                 io_priority.to_glib(),
                 cancellable.map(|p| p.as_ref()).to_glib_none().0,
                 Some(callback),
-                Box::into_raw(user_data) as *mut _,
+                Box_::into_raw(user_data) as *mut _,
             );
         }
     }
 
-    #[cfg(feature = "futures")]
     fn handshake_async_future(
         &self,
         io_priority: glib::Priority,
-    ) -> Box_<dyn future::Future<Output = Result<(), Error>> + std::marker::Unpin> {
-        use fragile::Fragile;
-        use GioFuture;
-
-        GioFuture::new(self, move |obj, send| {
+    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(), glib::Error>> + 'static>> {
+        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
             let cancellable = Cancellable::new();
-            let send = Fragile::new(send);
             obj.handshake_async(io_priority, Some(&cancellable), move |res| {
-                let _ = send.into_inner().send(res);
+                send.resolve(res);
             });
 
             cancellable
-        })
+        }))
+    }
+
+    #[cfg(any(feature = "v2_60", feature = "dox"))]
+    fn set_advertised_protocols(&self, protocols: &[&str]) {
+        unsafe {
+            gio_sys::g_tls_connection_set_advertised_protocols(
+                self.as_ref().to_glib_none().0,
+                protocols.to_glib_none().0,
+            );
+        }
     }
 
     fn set_certificate<P: IsA<TlsCertificate>>(&self, certificate: &P) {
@@ -311,6 +347,22 @@ impl<O: IsA<TlsConnection>> TlsConnectionExt for O {
         }
     }
 
+    #[cfg(any(feature = "v2_60", feature = "dox"))]
+    fn get_property_advertised_protocols(&self) -> Vec<GString> {
+        unsafe {
+            let mut value = Value::from_type(<Vec<GString> as StaticType>::static_type());
+            gobject_sys::g_object_get_property(
+                self.to_glib_none().0 as *mut gobject_sys::GObject,
+                b"advertised-protocols\0".as_ptr() as *const _,
+                value.to_glib_none_mut().0,
+            );
+            value
+                .get()
+                .expect("Return Value for property `advertised-protocols` getter")
+                .unwrap()
+        }
+    }
+
     fn get_property_base_io_stream(&self) -> Option<IOStream> {
         unsafe {
             let mut value = Value::from_type(<IOStream as StaticType>::static_type());
@@ -319,7 +371,9 @@ impl<O: IsA<TlsConnection>> TlsConnectionExt for O {
                 b"base-io-stream\0".as_ptr() as *const _,
                 value.to_glib_none_mut().0,
             );
-            value.get()
+            value
+                .get()
+                .expect("Return Value for property `base-io-stream` getter")
         }
     }
 
@@ -355,6 +409,34 @@ impl<O: IsA<TlsConnection>> TlsConnectionExt for O {
                 self.as_ptr() as *mut _,
                 b"accept-certificate\0".as_ptr() as *const _,
                 Some(transmute(accept_certificate_trampoline::<Self, F> as usize)),
+                Box_::into_raw(f),
+            )
+        }
+    }
+
+    #[cfg(any(feature = "v2_60", feature = "dox"))]
+    fn connect_property_advertised_protocols_notify<F: Fn(&Self) + 'static>(
+        &self,
+        f: F,
+    ) -> SignalHandlerId {
+        unsafe extern "C" fn notify_advertised_protocols_trampoline<P, F: Fn(&P) + 'static>(
+            this: *mut gio_sys::GTlsConnection,
+            _param_spec: glib_sys::gpointer,
+            f: glib_sys::gpointer,
+        ) where
+            P: IsA<TlsConnection>,
+        {
+            let f: &F = &*(f as *const F);
+            f(&TlsConnection::from_glib_borrow(this).unsafe_cast())
+        }
+        unsafe {
+            let f: Box_<F> = Box_::new(f);
+            connect_raw(
+                self.as_ptr() as *mut _,
+                b"notify::advertised-protocols\0".as_ptr() as *const _,
+                Some(transmute(
+                    notify_advertised_protocols_trampoline::<Self, F> as usize,
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -421,6 +503,34 @@ impl<O: IsA<TlsConnection>> TlsConnectionExt for O {
                 self.as_ptr() as *mut _,
                 b"notify::interaction\0".as_ptr() as *const _,
                 Some(transmute(notify_interaction_trampoline::<Self, F> as usize)),
+                Box_::into_raw(f),
+            )
+        }
+    }
+
+    #[cfg(any(feature = "v2_60", feature = "dox"))]
+    fn connect_property_negotiated_protocol_notify<F: Fn(&Self) + 'static>(
+        &self,
+        f: F,
+    ) -> SignalHandlerId {
+        unsafe extern "C" fn notify_negotiated_protocol_trampoline<P, F: Fn(&P) + 'static>(
+            this: *mut gio_sys::GTlsConnection,
+            _param_spec: glib_sys::gpointer,
+            f: glib_sys::gpointer,
+        ) where
+            P: IsA<TlsConnection>,
+        {
+            let f: &F = &*(f as *const F);
+            f(&TlsConnection::from_glib_borrow(this).unsafe_cast())
+        }
+        unsafe {
+            let f: Box_<F> = Box_::new(f);
+            connect_raw(
+                self.as_ptr() as *mut _,
+                b"notify::negotiated-protocol\0".as_ptr() as *const _,
+                Some(transmute(
+                    notify_negotiated_protocol_trampoline::<Self, F> as usize,
+                )),
                 Box_::into_raw(f),
             )
         }

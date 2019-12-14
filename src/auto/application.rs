@@ -9,6 +9,7 @@ use glib::object::IsA;
 use glib::signal::connect_raw;
 use glib::signal::SignalHandlerId;
 use glib::translate::*;
+use glib::value::SetValueOptional;
 use glib::GString;
 use glib::StaticType;
 use glib::ToValue;
@@ -25,7 +26,6 @@ use ActionMap;
 use ApplicationCommandLine;
 use ApplicationFlags;
 use Cancellable;
-use Error;
 use File;
 use Notification;
 
@@ -60,6 +60,7 @@ impl Application {
     }
 }
 
+#[derive(Clone, Default)]
 pub struct ApplicationBuilder {
     action_group: Option<ActionGroup>,
     application_id: Option<String>,
@@ -70,13 +71,7 @@ pub struct ApplicationBuilder {
 
 impl ApplicationBuilder {
     pub fn new() -> Self {
-        Self {
-            action_group: None,
-            application_id: None,
-            flags: None,
-            inactivity_timeout: None,
-            resource_base_path: None,
-        }
+        Self::default()
     }
 
     pub fn build(self) -> Application {
@@ -102,8 +97,8 @@ impl ApplicationBuilder {
             .expect("downcast")
     }
 
-    pub fn action_group(mut self, action_group: &ActionGroup) -> Self {
-        self.action_group = Some(action_group.clone());
+    pub fn action_group<P: IsA<ActionGroup>>(mut self, action_group: &P) -> Self {
+        self.action_group = Some(action_group.clone().upcast());
         self
     }
 
@@ -177,7 +172,7 @@ pub trait ApplicationExt: 'static {
 
     fn quit(&self);
 
-    fn register<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), Error>;
+    fn register<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), glib::Error>;
 
     fn release(&self);
 
@@ -209,7 +204,10 @@ pub trait ApplicationExt: 'static {
 
     fn withdraw_notification(&self, id: &str);
 
-    fn set_property_action_group(&self, action_group: Option<&ActionGroup>);
+    fn set_property_action_group<P: IsA<ActionGroup> + SetValueOptional>(
+        &self,
+        action_group: Option<&P>,
+    );
 
     fn connect_activate<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
 
@@ -219,6 +217,9 @@ pub trait ApplicationExt: 'static {
     ) -> SignalHandlerId;
 
     //fn connect_handle_local_options<Unsupported or ignored types>(&self, f: F) -> SignalHandlerId;
+
+    #[cfg(any(feature = "v2_60", feature = "dox"))]
+    fn connect_name_lost<F: Fn(&Self) -> bool + 'static>(&self, f: F) -> SignalHandlerId;
 
     fn connect_shutdown<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId;
 
@@ -398,7 +399,7 @@ impl<O: IsA<Application>> ApplicationExt for O {
         }
     }
 
-    fn register<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), Error> {
+    fn register<P: IsA<Cancellable>>(&self, cancellable: Option<&P>) -> Result<(), glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let _ = gio_sys::g_application_register(
@@ -525,7 +526,10 @@ impl<O: IsA<Application>> ApplicationExt for O {
         }
     }
 
-    fn set_property_action_group(&self, action_group: Option<&ActionGroup>) {
+    fn set_property_action_group<P: IsA<ActionGroup> + SetValueOptional>(
+        &self,
+        action_group: Option<&P>,
+    ) {
         unsafe {
             gobject_sys::g_object_set_property(
                 self.to_glib_none().0 as *mut gobject_sys::GObject,
@@ -591,6 +595,29 @@ impl<O: IsA<Application>> ApplicationExt for O {
     //fn connect_handle_local_options<Unsupported or ignored types>(&self, f: F) -> SignalHandlerId {
     //    Ignored options: GLib.VariantDict
     //}
+
+    #[cfg(any(feature = "v2_60", feature = "dox"))]
+    fn connect_name_lost<F: Fn(&Self) -> bool + 'static>(&self, f: F) -> SignalHandlerId {
+        unsafe extern "C" fn name_lost_trampoline<P, F: Fn(&P) -> bool + 'static>(
+            this: *mut gio_sys::GApplication,
+            f: glib_sys::gpointer,
+        ) -> glib_sys::gboolean
+        where
+            P: IsA<Application>,
+        {
+            let f: &F = &*(f as *const F);
+            f(&Application::from_glib_borrow(this).unsafe_cast()).to_glib()
+        }
+        unsafe {
+            let f: Box_<F> = Box_::new(f);
+            connect_raw(
+                self.as_ptr() as *mut _,
+                b"name-lost\0".as_ptr() as *const _,
+                Some(transmute(name_lost_trampoline::<Self, F> as usize)),
+                Box_::into_raw(f),
+            )
+        }
+    }
 
     fn connect_shutdown<F: Fn(&Self) + 'static>(&self, f: F) -> SignalHandlerId {
         unsafe extern "C" fn shutdown_trampoline<P, F: Fn(&P) + 'static>(
