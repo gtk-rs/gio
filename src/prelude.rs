@@ -9,15 +9,16 @@ pub use glib::prelude::*;
 
 pub use auto::traits::*;
 
+#[cfg(any(feature = "v2_60", feature = "dox"))]
+pub use app_info::AppInfoExtManual;
 pub use application::*;
 pub use converter::*;
-#[cfg(any(
-    all(not(windows), feature = "v2_58"),
-    all(not(windows), feature = "dox")
-))]
+#[cfg(any(feature = "v2_58", feature = "dox"))]
+#[cfg(any(all(not(windows), not(target_os = "macos")), feature = "dox"))]
 pub use desktop_app_info::DesktopAppInfoExtManual;
 pub use file::FileExtManual;
 pub use input_stream::InputStreamExtManual;
+pub use io_stream::IOStreamExtManual;
 #[cfg(any(feature = "v2_44", feature = "dox"))]
 pub use list_store::ListStoreExtManual;
 pub use output_stream::OutputStreamExtManual;
