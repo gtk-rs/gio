@@ -89,12 +89,14 @@ where
         &from_glib_borrow(seekable),
         offset,
         from_glib(type_),
-        Option::<Cancellable>::from_glib_borrow(cancellable).as_ref(),
+        Option::<Cancellable>::from_glib_borrow(cancellable)
+            .as_ref()
+            .as_ref(),
     ) {
         Ok(()) => glib_sys::GTRUE,
-        Err(mut e) => {
+        Err(e) => {
+            let mut e = mem::ManuallyDrop::new(e);
             *err = e.to_glib_none_mut().0;
-            mem::forget(e);
             glib_sys::GFALSE
         }
     }
@@ -127,12 +129,14 @@ where
     match imp.truncate(
         &from_glib_borrow(seekable),
         offset,
-        Option::<Cancellable>::from_glib_borrow(cancellable).as_ref(),
+        Option::<Cancellable>::from_glib_borrow(cancellable)
+            .as_ref()
+            .as_ref(),
     ) {
         Ok(()) => glib_sys::GTRUE,
-        Err(mut e) => {
+        Err(e) => {
+            let mut e = mem::ManuallyDrop::new(e);
             *err = e.to_glib_none_mut().0;
-            mem::forget(e);
             glib_sys::GFALSE
         }
     }

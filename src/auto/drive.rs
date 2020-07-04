@@ -514,14 +514,16 @@ impl<O: IsA<Drive>> DriveExt for O {
             P: IsA<Drive>,
         {
             let f: &F = &*(f as *const F);
-            f(&Drive::from_glib_borrow(this).unsafe_cast())
+            f(&Drive::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"changed\0".as_ptr() as *const _,
-                Some(transmute(changed_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    changed_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -535,14 +537,16 @@ impl<O: IsA<Drive>> DriveExt for O {
             P: IsA<Drive>,
         {
             let f: &F = &*(f as *const F);
-            f(&Drive::from_glib_borrow(this).unsafe_cast())
+            f(&Drive::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"disconnected\0".as_ptr() as *const _,
-                Some(transmute(disconnected_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    disconnected_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -556,14 +560,16 @@ impl<O: IsA<Drive>> DriveExt for O {
             P: IsA<Drive>,
         {
             let f: &F = &*(f as *const F);
-            f(&Drive::from_glib_borrow(this).unsafe_cast())
+            f(&Drive::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"eject-button\0".as_ptr() as *const _,
-                Some(transmute(eject_button_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    eject_button_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -577,14 +583,16 @@ impl<O: IsA<Drive>> DriveExt for O {
             P: IsA<Drive>,
         {
             let f: &F = &*(f as *const F);
-            f(&Drive::from_glib_borrow(this).unsafe_cast())
+            f(&Drive::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"stop-button\0".as_ptr() as *const _,
-                Some(transmute(stop_button_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    stop_button_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }

@@ -18,6 +18,8 @@ use IOStreamClass;
 use std::mem;
 use std::ptr;
 
+use once_cell::sync::Lazy;
+
 pub trait IOStreamImpl: IOStreamImplExt + Send + 'static {
     fn get_input_stream(&self, stream: &IOStream) -> crate::InputStream {
         self.parent_get_input_stream(stream)
@@ -105,12 +107,10 @@ unsafe impl<T: ObjectSubclass + IOStreamImpl> IsSubclassable<T> for IOStreamClas
     }
 }
 
-lazy_static! {
-    pub static ref OUTPUT_STREAM_QUARK: glib::Quark =
-        glib::Quark::from_string("gtk-rs-subclass-output-stream");
-    pub static ref INPUT_STREAM_QUARK: glib::Quark =
-        glib::Quark::from_string("gtk-rs-subclass-input-stream");
-}
+static OUTPUT_STREAM_QUARK: Lazy<glib::Quark> =
+    Lazy::new(|| glib::Quark::from_string("gtk-rs-subclass-output-stream"));
+static INPUT_STREAM_QUARK: Lazy<glib::Quark> =
+    Lazy::new(|| glib::Quark::from_string("gtk-rs-subclass-input-stream"));
 
 unsafe extern "C" fn stream_get_input_stream<T: ObjectSubclass>(
     ptr: *mut gio_sys::GIOStream,
@@ -120,7 +120,7 @@ where
 {
     let instance = &*(ptr as *mut T::Instance);
     let imp = instance.get_impl();
-    let wrap: IOStream = from_glib_borrow(ptr);
+    let wrap: Borrowed<IOStream> = from_glib_borrow(ptr);
 
     let ret = imp.get_input_stream(&wrap);
 
@@ -142,7 +142,7 @@ where
     gobject_sys::g_object_set_qdata_full(
         ptr as *mut _,
         INPUT_STREAM_QUARK.to_glib(),
-        ret.as_ptr() as *mut _,
+        gobject_sys::g_object_ref(ret.as_ptr() as *mut _) as *mut _,
         Some(unref),
     );
 
@@ -157,7 +157,7 @@ where
 {
     let instance = &*(ptr as *mut T::Instance);
     let imp = instance.get_impl();
-    let wrap: IOStream = from_glib_borrow(ptr);
+    let wrap: Borrowed<IOStream> = from_glib_borrow(ptr);
 
     let ret = imp.get_output_stream(&wrap);
 
@@ -179,7 +179,7 @@ where
     gobject_sys::g_object_set_qdata_full(
         ptr as *mut _,
         OUTPUT_STREAM_QUARK.to_glib(),
-        ret.as_ptr() as *mut _,
+        gobject_sys::g_object_ref(ret.as_ptr() as *mut _) as *mut _,
         Some(unref),
     );
 
@@ -196,16 +196,18 @@ where
 {
     let instance = &*(ptr as *mut T::Instance);
     let imp = instance.get_impl();
-    let wrap: IOStream = from_glib_borrow(ptr);
+    let wrap: Borrowed<IOStream> = from_glib_borrow(ptr);
 
     match imp.close(
         &wrap,
-        Option::<Cancellable>::from_glib_borrow(cancellable).as_ref(),
+        Option::<Cancellable>::from_glib_borrow(cancellable)
+            .as_ref()
+            .as_ref(),
     ) {
         Ok(_) => glib_sys::GTRUE,
-        Err(mut e) => {
+        Err(e) => {
+            let mut e = mem::ManuallyDrop::new(e);
             *err = e.to_glib_none_mut().0;
-            mem::forget(e);
             glib_sys::GFALSE
         }
     }

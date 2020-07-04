@@ -76,10 +76,11 @@ impl BufferedInputStreamBuilder {
         if let Some(ref close_base_stream) = self.close_base_stream {
             properties.push(("close-base-stream", close_base_stream));
         }
-        glib::Object::new(BufferedInputStream::static_type(), &properties)
+        let ret = glib::Object::new(BufferedInputStream::static_type(), &properties)
             .expect("object new")
-            .downcast()
-            .expect("downcast")
+            .downcast::<BufferedInputStream>()
+            .expect("downcast");
+        ret
     }
 
     pub fn buffer_size(mut self, buffer_size: u32) -> Self {
@@ -266,14 +267,16 @@ impl<O: IsA<BufferedInputStream>> BufferedInputStreamExt for O {
             P: IsA<BufferedInputStream>,
         {
             let f: &F = &*(f as *const F);
-            f(&BufferedInputStream::from_glib_borrow(this).unsafe_cast())
+            f(&BufferedInputStream::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::buffer-size\0".as_ptr() as *const _,
-                Some(transmute(notify_buffer_size_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_buffer_size_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }

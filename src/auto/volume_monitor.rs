@@ -121,7 +121,7 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &VolumeMonitor::from_glib_borrow(this).unsafe_cast(),
+                &VolumeMonitor::from_glib_borrow(this).unsafe_cast_ref(),
                 &from_glib_borrow(drive),
             )
         }
@@ -130,7 +130,9 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"drive-changed\0".as_ptr() as *const _,
-                Some(transmute(drive_changed_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    drive_changed_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -146,7 +148,7 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &VolumeMonitor::from_glib_borrow(this).unsafe_cast(),
+                &VolumeMonitor::from_glib_borrow(this).unsafe_cast_ref(),
                 &from_glib_borrow(drive),
             )
         }
@@ -155,7 +157,9 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"drive-connected\0".as_ptr() as *const _,
-                Some(transmute(drive_connected_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    drive_connected_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -171,7 +175,7 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &VolumeMonitor::from_glib_borrow(this).unsafe_cast(),
+                &VolumeMonitor::from_glib_borrow(this).unsafe_cast_ref(),
                 &from_glib_borrow(drive),
             )
         }
@@ -180,7 +184,9 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"drive-disconnected\0".as_ptr() as *const _,
-                Some(transmute(drive_disconnected_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    drive_disconnected_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -196,7 +202,7 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &VolumeMonitor::from_glib_borrow(this).unsafe_cast(),
+                &VolumeMonitor::from_glib_borrow(this).unsafe_cast_ref(),
                 &from_glib_borrow(drive),
             )
         }
@@ -205,7 +211,9 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"drive-eject-button\0".as_ptr() as *const _,
-                Some(transmute(drive_eject_button_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    drive_eject_button_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -221,7 +229,7 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &VolumeMonitor::from_glib_borrow(this).unsafe_cast(),
+                &VolumeMonitor::from_glib_borrow(this).unsafe_cast_ref(),
                 &from_glib_borrow(drive),
             )
         }
@@ -230,7 +238,9 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"drive-stop-button\0".as_ptr() as *const _,
-                Some(transmute(drive_stop_button_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    drive_stop_button_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -246,7 +256,7 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &VolumeMonitor::from_glib_borrow(this).unsafe_cast(),
+                &VolumeMonitor::from_glib_borrow(this).unsafe_cast_ref(),
                 &from_glib_borrow(mount),
             )
         }
@@ -255,7 +265,9 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"mount-added\0".as_ptr() as *const _,
-                Some(transmute(mount_added_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    mount_added_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -271,7 +283,7 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &VolumeMonitor::from_glib_borrow(this).unsafe_cast(),
+                &VolumeMonitor::from_glib_borrow(this).unsafe_cast_ref(),
                 &from_glib_borrow(mount),
             )
         }
@@ -280,7 +292,9 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"mount-changed\0".as_ptr() as *const _,
-                Some(transmute(mount_changed_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    mount_changed_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -296,7 +310,7 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &VolumeMonitor::from_glib_borrow(this).unsafe_cast(),
+                &VolumeMonitor::from_glib_borrow(this).unsafe_cast_ref(),
                 &from_glib_borrow(mount),
             )
         }
@@ -305,7 +319,9 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"mount-pre-unmount\0".as_ptr() as *const _,
-                Some(transmute(mount_pre_unmount_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    mount_pre_unmount_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -321,7 +337,7 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &VolumeMonitor::from_glib_borrow(this).unsafe_cast(),
+                &VolumeMonitor::from_glib_borrow(this).unsafe_cast_ref(),
                 &from_glib_borrow(mount),
             )
         }
@@ -330,7 +346,9 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"mount-removed\0".as_ptr() as *const _,
-                Some(transmute(mount_removed_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    mount_removed_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -346,7 +364,7 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &VolumeMonitor::from_glib_borrow(this).unsafe_cast(),
+                &VolumeMonitor::from_glib_borrow(this).unsafe_cast_ref(),
                 &from_glib_borrow(volume),
             )
         }
@@ -355,7 +373,9 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"volume-added\0".as_ptr() as *const _,
-                Some(transmute(volume_added_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    volume_added_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -371,7 +391,7 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &VolumeMonitor::from_glib_borrow(this).unsafe_cast(),
+                &VolumeMonitor::from_glib_borrow(this).unsafe_cast_ref(),
                 &from_glib_borrow(volume),
             )
         }
@@ -380,7 +400,9 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"volume-changed\0".as_ptr() as *const _,
-                Some(transmute(volume_changed_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    volume_changed_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -396,7 +418,7 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &VolumeMonitor::from_glib_borrow(this).unsafe_cast(),
+                &VolumeMonitor::from_glib_borrow(this).unsafe_cast_ref(),
                 &from_glib_borrow(volume),
             )
         }
@@ -405,7 +427,9 @@ impl<O: IsA<VolumeMonitor>> VolumeMonitorExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"volume-removed\0".as_ptr() as *const _,
-                Some(transmute(volume_removed_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    volume_removed_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }

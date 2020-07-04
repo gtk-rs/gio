@@ -28,7 +28,7 @@ impl InetAddress {
         unsafe { from_glib_full(gio_sys::g_inet_address_new_any(family.to_glib())) }
     }
 
-    pub fn new_from_string(string: &str) -> InetAddress {
+    pub fn from_string(string: &str) -> InetAddress {
         unsafe {
             from_glib_full(gio_sys::g_inet_address_new_from_string(
                 string.to_glib_none().0,
@@ -258,14 +258,16 @@ impl<O: IsA<InetAddress>> InetAddressExt for O {
             P: IsA<InetAddress>,
         {
             let f: &F = &*(f as *const F);
-            f(&InetAddress::from_glib_borrow(this).unsafe_cast())
+            f(&InetAddress::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::is-any\0".as_ptr() as *const _,
-                Some(transmute(notify_is_any_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_is_any_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -283,15 +285,15 @@ impl<O: IsA<InetAddress>> InetAddressExt for O {
             P: IsA<InetAddress>,
         {
             let f: &F = &*(f as *const F);
-            f(&InetAddress::from_glib_borrow(this).unsafe_cast())
+            f(&InetAddress::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::is-link-local\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_is_link_local_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_is_link_local_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -310,14 +312,16 @@ impl<O: IsA<InetAddress>> InetAddressExt for O {
             P: IsA<InetAddress>,
         {
             let f: &F = &*(f as *const F);
-            f(&InetAddress::from_glib_borrow(this).unsafe_cast())
+            f(&InetAddress::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::is-loopback\0".as_ptr() as *const _,
-                Some(transmute(notify_is_loopback_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_is_loopback_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -335,15 +339,15 @@ impl<O: IsA<InetAddress>> InetAddressExt for O {
             P: IsA<InetAddress>,
         {
             let f: &F = &*(f as *const F);
-            f(&InetAddress::from_glib_borrow(this).unsafe_cast())
+            f(&InetAddress::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::is-mc-global\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_is_mc_global_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_is_mc_global_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -365,15 +369,15 @@ impl<O: IsA<InetAddress>> InetAddressExt for O {
             P: IsA<InetAddress>,
         {
             let f: &F = &*(f as *const F);
-            f(&InetAddress::from_glib_borrow(this).unsafe_cast())
+            f(&InetAddress::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::is-mc-link-local\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_is_mc_link_local_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_is_mc_link_local_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -395,15 +399,15 @@ impl<O: IsA<InetAddress>> InetAddressExt for O {
             P: IsA<InetAddress>,
         {
             let f: &F = &*(f as *const F);
-            f(&InetAddress::from_glib_borrow(this).unsafe_cast())
+            f(&InetAddress::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::is-mc-node-local\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_is_mc_node_local_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_is_mc_node_local_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -425,15 +429,15 @@ impl<O: IsA<InetAddress>> InetAddressExt for O {
             P: IsA<InetAddress>,
         {
             let f: &F = &*(f as *const F);
-            f(&InetAddress::from_glib_borrow(this).unsafe_cast())
+            f(&InetAddress::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::is-mc-org-local\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_is_mc_org_local_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_is_mc_org_local_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -455,15 +459,15 @@ impl<O: IsA<InetAddress>> InetAddressExt for O {
             P: IsA<InetAddress>,
         {
             let f: &F = &*(f as *const F);
-            f(&InetAddress::from_glib_borrow(this).unsafe_cast())
+            f(&InetAddress::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::is-mc-site-local\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_is_mc_site_local_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_is_mc_site_local_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -482,15 +486,15 @@ impl<O: IsA<InetAddress>> InetAddressExt for O {
             P: IsA<InetAddress>,
         {
             let f: &F = &*(f as *const F);
-            f(&InetAddress::from_glib_borrow(this).unsafe_cast())
+            f(&InetAddress::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::is-multicast\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_is_multicast_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_is_multicast_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -509,15 +513,15 @@ impl<O: IsA<InetAddress>> InetAddressExt for O {
             P: IsA<InetAddress>,
         {
             let f: &F = &*(f as *const F);
-            f(&InetAddress::from_glib_borrow(this).unsafe_cast())
+            f(&InetAddress::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::is-site-local\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_is_site_local_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_is_site_local_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )

@@ -102,15 +102,15 @@ impl<O: IsA<TlsServerConnection>> TlsServerConnectionExt for O {
             P: IsA<TlsServerConnection>,
         {
             let f: &F = &*(f as *const F);
-            f(&TlsServerConnection::from_glib_borrow(this).unsafe_cast())
+            f(&TlsServerConnection::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::authentication-mode\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_authentication_mode_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_authentication_mode_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )

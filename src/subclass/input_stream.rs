@@ -180,21 +180,23 @@ where
 
     let instance = &*(ptr as *mut T::Instance);
     let imp = instance.get_impl();
-    let wrap: InputStream = from_glib_borrow(ptr);
+    let wrap: Borrowed<InputStream> = from_glib_borrow(ptr);
 
     match imp.read(
         &wrap,
         slice::from_raw_parts_mut(buffer as *mut u8, count),
-        Option::<Cancellable>::from_glib_borrow(cancellable).as_ref(),
+        Option::<Cancellable>::from_glib_borrow(cancellable)
+            .as_ref()
+            .as_ref(),
     ) {
         Ok(res) => {
             assert!(res <= isize::MAX as usize);
             assert!(res <= count);
             res as isize
         }
-        Err(mut e) => {
+        Err(e) => {
+            let mut e = mem::ManuallyDrop::new(e);
             *err = e.to_glib_none_mut().0;
-            mem::forget(e);
             -1
         }
     }
@@ -210,16 +212,18 @@ where
 {
     let instance = &*(ptr as *mut T::Instance);
     let imp = instance.get_impl();
-    let wrap: InputStream = from_glib_borrow(ptr);
+    let wrap: Borrowed<InputStream> = from_glib_borrow(ptr);
 
     match imp.close(
         &wrap,
-        Option::<Cancellable>::from_glib_borrow(cancellable).as_ref(),
+        Option::<Cancellable>::from_glib_borrow(cancellable)
+            .as_ref()
+            .as_ref(),
     ) {
         Ok(_) => glib_sys::GTRUE,
-        Err(mut e) => {
+        Err(e) => {
+            let mut e = mem::ManuallyDrop::new(e);
             *err = e.to_glib_none_mut().0;
-            mem::forget(e);
             glib_sys::GFALSE
         }
     }
@@ -240,21 +244,23 @@ where
 
     let instance = &*(ptr as *mut T::Instance);
     let imp = instance.get_impl();
-    let wrap: InputStream = from_glib_borrow(ptr);
+    let wrap: Borrowed<InputStream> = from_glib_borrow(ptr);
 
     match imp.skip(
         &wrap,
         count,
-        Option::<Cancellable>::from_glib_borrow(cancellable).as_ref(),
+        Option::<Cancellable>::from_glib_borrow(cancellable)
+            .as_ref()
+            .as_ref(),
     ) {
         Ok(res) => {
             assert!(res <= isize::MAX as usize);
             assert!(res <= count);
             res as isize
         }
-        Err(mut e) => {
+        Err(e) => {
+            let mut e = mem::ManuallyDrop::new(e);
             *err = e.to_glib_none_mut().0;
-            mem::forget(e);
             -1
         }
     }

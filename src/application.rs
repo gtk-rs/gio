@@ -37,7 +37,7 @@ impl<O: IsA<Application>> ApplicationExtManual for O {
             let f: &F = &*(f as *const F);
             let files: Vec<File> = FromGlibContainer::from_glib_none_num(files, n_files as usize);
             f(
-                &Application::from_glib_borrow(this).unsafe_cast(),
+                &Application::from_glib_borrow(this).unsafe_cast_ref(),
                 &files,
                 &GString::from_glib_borrow(hint),
             )
@@ -47,7 +47,9 @@ impl<O: IsA<Application>> ApplicationExtManual for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"open\0".as_ptr() as *const _,
-                Some(transmute(open_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    open_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }

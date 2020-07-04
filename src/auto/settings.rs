@@ -50,7 +50,7 @@ impl Settings {
         }
     }
 
-    pub fn new_with_backend<P: IsA<SettingsBackend>>(schema_id: &str, backend: &P) -> Settings {
+    pub fn with_backend<P: IsA<SettingsBackend>>(schema_id: &str, backend: &P) -> Settings {
         unsafe {
             from_glib_full(gio_sys::g_settings_new_with_backend(
                 schema_id.to_glib_none().0,
@@ -59,7 +59,7 @@ impl Settings {
         }
     }
 
-    pub fn new_with_backend_and_path<P: IsA<SettingsBackend>>(
+    pub fn with_backend_and_path<P: IsA<SettingsBackend>>(
         schema_id: &str,
         backend: &P,
         path: &str,
@@ -73,7 +73,7 @@ impl Settings {
         }
     }
 
-    pub fn new_with_path(schema_id: &str, path: &str) -> Settings {
+    pub fn with_path(schema_id: &str, path: &str) -> Settings {
         unsafe {
             from_glib_full(gio_sys::g_settings_new_with_path(
                 schema_id.to_glib_none().0,
@@ -665,7 +665,7 @@ impl<O: IsA<Settings>> SettingsExt for O {
     }
 
     //fn connect_change_event<Unsupported or ignored types>(&self, f: F) -> SignalHandlerId {
-    //    Unimplemented keys: *.CArray TypeId { ns_id: 2, id: 4 }
+    //    Unimplemented keys: *.CArray TypeId { ns_id: 2, id: 5 }
     //}
 
     fn connect_changed<F: Fn(&Self, &str) + 'static>(&self, f: F) -> SignalHandlerId {
@@ -678,7 +678,7 @@ impl<O: IsA<Settings>> SettingsExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &Settings::from_glib_borrow(this).unsafe_cast(),
+                &Settings::from_glib_borrow(this).unsafe_cast_ref(),
                 &GString::from_glib_borrow(key),
             )
         }
@@ -687,7 +687,9 @@ impl<O: IsA<Settings>> SettingsExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"changed\0".as_ptr() as *const _,
-                Some(transmute(changed_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    changed_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -709,15 +711,15 @@ impl<O: IsA<Settings>> SettingsExt for O {
             P: IsA<Settings>,
         {
             let f: &F = &*(f as *const F);
-            f(&Settings::from_glib_borrow(this).unsafe_cast(), key).to_glib()
+            f(&Settings::from_glib_borrow(this).unsafe_cast_ref(), key).to_glib()
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"writable-change-event\0".as_ptr() as *const _,
-                Some(transmute(
-                    writable_change_event_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    writable_change_event_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -734,7 +736,7 @@ impl<O: IsA<Settings>> SettingsExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &Settings::from_glib_borrow(this).unsafe_cast(),
+                &Settings::from_glib_borrow(this).unsafe_cast_ref(),
                 &GString::from_glib_borrow(key),
             )
         }
@@ -743,7 +745,9 @@ impl<O: IsA<Settings>> SettingsExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"writable-changed\0".as_ptr() as *const _,
-                Some(transmute(writable_changed_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    writable_changed_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -758,14 +762,16 @@ impl<O: IsA<Settings>> SettingsExt for O {
             P: IsA<Settings>,
         {
             let f: &F = &*(f as *const F);
-            f(&Settings::from_glib_borrow(this).unsafe_cast())
+            f(&Settings::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::delay-apply\0".as_ptr() as *const _,
-                Some(transmute(notify_delay_apply_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_delay_apply_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -783,15 +789,15 @@ impl<O: IsA<Settings>> SettingsExt for O {
             P: IsA<Settings>,
         {
             let f: &F = &*(f as *const F);
-            f(&Settings::from_glib_borrow(this).unsafe_cast())
+            f(&Settings::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::has-unapplied\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_has_unapplied_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_has_unapplied_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
