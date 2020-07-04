@@ -26,6 +26,7 @@ use ActionMap;
 use ApplicationCommandLine;
 use ApplicationFlags;
 use Cancellable;
+use DBusConnection;
 use File;
 use Notification;
 
@@ -91,10 +92,11 @@ impl ApplicationBuilder {
         if let Some(ref resource_base_path) = self.resource_base_path {
             properties.push(("resource-base-path", resource_base_path));
         }
-        glib::Object::new(Application::static_type(), &properties)
+        let ret = glib::Object::new(Application::static_type(), &properties)
             .expect("object new")
-            .downcast()
-            .expect("downcast")
+            .downcast::<Application>()
+            .expect("downcast");
+        ret
     }
 
     pub fn action_group<P: IsA<ActionGroup>>(mut self, action_group: &P) -> Self {
@@ -147,7 +149,7 @@ pub trait ApplicationExt: 'static {
 
     fn get_application_id(&self) -> Option<GString>;
 
-    //fn get_dbus_connection(&self) -> /*Ignored*/Option<DBusConnection>;
+    fn get_dbus_connection(&self) -> Option<DBusConnection>;
 
     fn get_dbus_object_path(&self) -> Option<GString>;
 
@@ -216,7 +218,10 @@ pub trait ApplicationExt: 'static {
         f: F,
     ) -> SignalHandlerId;
 
-    //fn connect_handle_local_options<Unsupported or ignored types>(&self, f: F) -> SignalHandlerId;
+    fn connect_handle_local_options<F: Fn(&Self, &glib::VariantDict) -> i32 + 'static>(
+        &self,
+        f: F,
+    ) -> SignalHandlerId;
 
     #[cfg(any(feature = "v2_60", feature = "dox"))]
     fn connect_name_lost<F: Fn(&Self) -> bool + 'static>(&self, f: F) -> SignalHandlerId;
@@ -312,9 +317,13 @@ impl<O: IsA<Application>> ApplicationExt for O {
         }
     }
 
-    //fn get_dbus_connection(&self) -> /*Ignored*/Option<DBusConnection> {
-    //    unsafe { TODO: call gio_sys:g_application_get_dbus_connection() }
-    //}
+    fn get_dbus_connection(&self) -> Option<DBusConnection> {
+        unsafe {
+            from_glib_none(gio_sys::g_application_get_dbus_connection(
+                self.as_ref().to_glib_none().0,
+            ))
+        }
+    }
 
     fn get_dbus_object_path(&self) -> Option<GString> {
         unsafe {
@@ -547,14 +556,16 @@ impl<O: IsA<Application>> ApplicationExt for O {
             P: IsA<Application>,
         {
             let f: &F = &*(f as *const F);
-            f(&Application::from_glib_borrow(this).unsafe_cast())
+            f(&Application::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"activate\0".as_ptr() as *const _,
-                Some(transmute(activate_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    activate_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -577,7 +588,7 @@ impl<O: IsA<Application>> ApplicationExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &Application::from_glib_borrow(this).unsafe_cast(),
+                &Application::from_glib_borrow(this).unsafe_cast_ref(),
                 &from_glib_borrow(command_line),
             )
         }
@@ -586,15 +597,47 @@ impl<O: IsA<Application>> ApplicationExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"command-line\0".as_ptr() as *const _,
-                Some(transmute(command_line_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    command_line_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
     }
 
-    //fn connect_handle_local_options<Unsupported or ignored types>(&self, f: F) -> SignalHandlerId {
-    //    Ignored options: GLib.VariantDict
-    //}
+    fn connect_handle_local_options<F: Fn(&Self, &glib::VariantDict) -> i32 + 'static>(
+        &self,
+        f: F,
+    ) -> SignalHandlerId {
+        unsafe extern "C" fn handle_local_options_trampoline<
+            P,
+            F: Fn(&P, &glib::VariantDict) -> i32 + 'static,
+        >(
+            this: *mut gio_sys::GApplication,
+            options: *mut glib_sys::GVariantDict,
+            f: glib_sys::gpointer,
+        ) -> libc::c_int
+        where
+            P: IsA<Application>,
+        {
+            let f: &F = &*(f as *const F);
+            f(
+                &Application::from_glib_borrow(this).unsafe_cast_ref(),
+                &from_glib_borrow(options),
+            )
+        }
+        unsafe {
+            let f: Box_<F> = Box_::new(f);
+            connect_raw(
+                self.as_ptr() as *mut _,
+                b"handle-local-options\0".as_ptr() as *const _,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    handle_local_options_trampoline::<Self, F> as *const (),
+                )),
+                Box_::into_raw(f),
+            )
+        }
+    }
 
     #[cfg(any(feature = "v2_60", feature = "dox"))]
     fn connect_name_lost<F: Fn(&Self) -> bool + 'static>(&self, f: F) -> SignalHandlerId {
@@ -606,14 +649,16 @@ impl<O: IsA<Application>> ApplicationExt for O {
             P: IsA<Application>,
         {
             let f: &F = &*(f as *const F);
-            f(&Application::from_glib_borrow(this).unsafe_cast()).to_glib()
+            f(&Application::from_glib_borrow(this).unsafe_cast_ref()).to_glib()
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"name-lost\0".as_ptr() as *const _,
-                Some(transmute(name_lost_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    name_lost_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -627,14 +672,16 @@ impl<O: IsA<Application>> ApplicationExt for O {
             P: IsA<Application>,
         {
             let f: &F = &*(f as *const F);
-            f(&Application::from_glib_borrow(this).unsafe_cast())
+            f(&Application::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"shutdown\0".as_ptr() as *const _,
-                Some(transmute(shutdown_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    shutdown_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -648,14 +695,16 @@ impl<O: IsA<Application>> ApplicationExt for O {
             P: IsA<Application>,
         {
             let f: &F = &*(f as *const F);
-            f(&Application::from_glib_borrow(this).unsafe_cast())
+            f(&Application::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"startup\0".as_ptr() as *const _,
-                Some(transmute(startup_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    startup_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -673,15 +722,15 @@ impl<O: IsA<Application>> ApplicationExt for O {
             P: IsA<Application>,
         {
             let f: &F = &*(f as *const F);
-            f(&Application::from_glib_borrow(this).unsafe_cast())
+            f(&Application::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::action-group\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_action_group_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_action_group_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -700,15 +749,15 @@ impl<O: IsA<Application>> ApplicationExt for O {
             P: IsA<Application>,
         {
             let f: &F = &*(f as *const F);
-            f(&Application::from_glib_borrow(this).unsafe_cast())
+            f(&Application::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::application-id\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_application_id_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_application_id_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -724,14 +773,16 @@ impl<O: IsA<Application>> ApplicationExt for O {
             P: IsA<Application>,
         {
             let f: &F = &*(f as *const F);
-            f(&Application::from_glib_borrow(this).unsafe_cast())
+            f(&Application::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::flags\0".as_ptr() as *const _,
-                Some(transmute(notify_flags_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_flags_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -749,15 +800,15 @@ impl<O: IsA<Application>> ApplicationExt for O {
             P: IsA<Application>,
         {
             let f: &F = &*(f as *const F);
-            f(&Application::from_glib_borrow(this).unsafe_cast())
+            f(&Application::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::inactivity-timeout\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_inactivity_timeout_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_inactivity_timeout_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -774,14 +825,16 @@ impl<O: IsA<Application>> ApplicationExt for O {
             P: IsA<Application>,
         {
             let f: &F = &*(f as *const F);
-            f(&Application::from_glib_borrow(this).unsafe_cast())
+            f(&Application::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::is-busy\0".as_ptr() as *const _,
-                Some(transmute(notify_is_busy_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_is_busy_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -799,15 +852,15 @@ impl<O: IsA<Application>> ApplicationExt for O {
             P: IsA<Application>,
         {
             let f: &F = &*(f as *const F);
-            f(&Application::from_glib_borrow(this).unsafe_cast())
+            f(&Application::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::is-registered\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_is_registered_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_is_registered_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -823,14 +876,16 @@ impl<O: IsA<Application>> ApplicationExt for O {
             P: IsA<Application>,
         {
             let f: &F = &*(f as *const F);
-            f(&Application::from_glib_borrow(this).unsafe_cast())
+            f(&Application::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::is-remote\0".as_ptr() as *const _,
-                Some(transmute(notify_is_remote_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_is_remote_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -848,15 +903,15 @@ impl<O: IsA<Application>> ApplicationExt for O {
             P: IsA<Application>,
         {
             let f: &F = &*(f as *const F);
-            f(&Application::from_glib_borrow(this).unsafe_cast())
+            f(&Application::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::resource-base-path\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_resource_base_path_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_resource_base_path_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )

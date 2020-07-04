@@ -120,14 +120,16 @@ impl<O: IsA<TlsPassword>> TlsPasswordExt for O {
             P: IsA<TlsPassword>,
         {
             let f: &F = &*(f as *const F);
-            f(&TlsPassword::from_glib_borrow(this).unsafe_cast())
+            f(&TlsPassword::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::description\0".as_ptr() as *const _,
-                Some(transmute(notify_description_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_description_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -142,14 +144,16 @@ impl<O: IsA<TlsPassword>> TlsPasswordExt for O {
             P: IsA<TlsPassword>,
         {
             let f: &F = &*(f as *const F);
-            f(&TlsPassword::from_glib_borrow(this).unsafe_cast())
+            f(&TlsPassword::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::flags\0".as_ptr() as *const _,
-                Some(transmute(notify_flags_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_flags_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -164,14 +168,16 @@ impl<O: IsA<TlsPassword>> TlsPasswordExt for O {
             P: IsA<TlsPassword>,
         {
             let f: &F = &*(f as *const F);
-            f(&TlsPassword::from_glib_borrow(this).unsafe_cast())
+            f(&TlsPassword::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::warning\0".as_ptr() as *const _,
-                Some(transmute(notify_warning_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_warning_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }

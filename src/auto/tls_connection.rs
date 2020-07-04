@@ -131,6 +131,7 @@ pub trait TlsConnectionExt: 'static {
         f: F,
     ) -> SignalHandlerId;
 
+    #[cfg_attr(feature = "v2_60", deprecated)]
     fn connect_property_rehandshake_mode_notify<F: Fn(&Self) + 'static>(
         &self,
         f: F,
@@ -397,7 +398,7 @@ impl<O: IsA<TlsConnection>> TlsConnectionExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &TlsConnection::from_glib_borrow(this).unsafe_cast(),
+                &TlsConnection::from_glib_borrow(this).unsafe_cast_ref(),
                 &from_glib_borrow(peer_cert),
                 from_glib(errors),
             )
@@ -408,7 +409,9 @@ impl<O: IsA<TlsConnection>> TlsConnectionExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"accept-certificate\0".as_ptr() as *const _,
-                Some(transmute(accept_certificate_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    accept_certificate_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -427,15 +430,15 @@ impl<O: IsA<TlsConnection>> TlsConnectionExt for O {
             P: IsA<TlsConnection>,
         {
             let f: &F = &*(f as *const F);
-            f(&TlsConnection::from_glib_borrow(this).unsafe_cast())
+            f(&TlsConnection::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::advertised-protocols\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_advertised_protocols_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_advertised_protocols_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -451,14 +454,16 @@ impl<O: IsA<TlsConnection>> TlsConnectionExt for O {
             P: IsA<TlsConnection>,
         {
             let f: &F = &*(f as *const F);
-            f(&TlsConnection::from_glib_borrow(this).unsafe_cast())
+            f(&TlsConnection::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::certificate\0".as_ptr() as *const _,
-                Some(transmute(notify_certificate_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_certificate_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -473,14 +478,16 @@ impl<O: IsA<TlsConnection>> TlsConnectionExt for O {
             P: IsA<TlsConnection>,
         {
             let f: &F = &*(f as *const F);
-            f(&TlsConnection::from_glib_borrow(this).unsafe_cast())
+            f(&TlsConnection::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::database\0".as_ptr() as *const _,
-                Some(transmute(notify_database_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_database_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -495,14 +502,16 @@ impl<O: IsA<TlsConnection>> TlsConnectionExt for O {
             P: IsA<TlsConnection>,
         {
             let f: &F = &*(f as *const F);
-            f(&TlsConnection::from_glib_borrow(this).unsafe_cast())
+            f(&TlsConnection::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::interaction\0".as_ptr() as *const _,
-                Some(transmute(notify_interaction_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_interaction_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -521,15 +530,15 @@ impl<O: IsA<TlsConnection>> TlsConnectionExt for O {
             P: IsA<TlsConnection>,
         {
             let f: &F = &*(f as *const F);
-            f(&TlsConnection::from_glib_borrow(this).unsafe_cast())
+            f(&TlsConnection::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::negotiated-protocol\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_negotiated_protocol_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_negotiated_protocol_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -548,15 +557,15 @@ impl<O: IsA<TlsConnection>> TlsConnectionExt for O {
             P: IsA<TlsConnection>,
         {
             let f: &F = &*(f as *const F);
-            f(&TlsConnection::from_glib_borrow(this).unsafe_cast())
+            f(&TlsConnection::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::peer-certificate\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_peer_certificate_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_peer_certificate_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -575,15 +584,15 @@ impl<O: IsA<TlsConnection>> TlsConnectionExt for O {
             P: IsA<TlsConnection>,
         {
             let f: &F = &*(f as *const F);
-            f(&TlsConnection::from_glib_borrow(this).unsafe_cast())
+            f(&TlsConnection::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::peer-certificate-errors\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_peer_certificate_errors_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_peer_certificate_errors_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -602,15 +611,15 @@ impl<O: IsA<TlsConnection>> TlsConnectionExt for O {
             P: IsA<TlsConnection>,
         {
             let f: &F = &*(f as *const F);
-            f(&TlsConnection::from_glib_borrow(this).unsafe_cast())
+            f(&TlsConnection::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::rehandshake-mode\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_rehandshake_mode_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_rehandshake_mode_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -629,15 +638,15 @@ impl<O: IsA<TlsConnection>> TlsConnectionExt for O {
             P: IsA<TlsConnection>,
         {
             let f: &F = &*(f as *const F);
-            f(&TlsConnection::from_glib_borrow(this).unsafe_cast())
+            f(&TlsConnection::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::require-close-notify\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_require_close_notify_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_require_close_notify_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )

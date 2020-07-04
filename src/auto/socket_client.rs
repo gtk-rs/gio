@@ -759,10 +759,12 @@ impl<O: IsA<SocketClient>> SocketClientExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &SocketClient::from_glib_borrow(this).unsafe_cast(),
+                &SocketClient::from_glib_borrow(this).unsafe_cast_ref(),
                 from_glib(event),
                 &from_glib_borrow(connectable),
-                Option::<IOStream>::from_glib_borrow(connection).as_ref(),
+                Option::<IOStream>::from_glib_borrow(connection)
+                    .as_ref()
+                    .as_ref(),
             )
         }
         unsafe {
@@ -770,7 +772,9 @@ impl<O: IsA<SocketClient>> SocketClientExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"event\0".as_ptr() as *const _,
-                Some(transmute(event_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    event_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -788,15 +792,15 @@ impl<O: IsA<SocketClient>> SocketClientExt for O {
             P: IsA<SocketClient>,
         {
             let f: &F = &*(f as *const F);
-            f(&SocketClient::from_glib_borrow(this).unsafe_cast())
+            f(&SocketClient::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::enable-proxy\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_enable_proxy_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_enable_proxy_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -812,14 +816,16 @@ impl<O: IsA<SocketClient>> SocketClientExt for O {
             P: IsA<SocketClient>,
         {
             let f: &F = &*(f as *const F);
-            f(&SocketClient::from_glib_borrow(this).unsafe_cast())
+            f(&SocketClient::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::family\0".as_ptr() as *const _,
-                Some(transmute(notify_family_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_family_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -837,15 +843,15 @@ impl<O: IsA<SocketClient>> SocketClientExt for O {
             P: IsA<SocketClient>,
         {
             let f: &F = &*(f as *const F);
-            f(&SocketClient::from_glib_borrow(this).unsafe_cast())
+            f(&SocketClient::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::local-address\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_local_address_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_local_address_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -861,14 +867,16 @@ impl<O: IsA<SocketClient>> SocketClientExt for O {
             P: IsA<SocketClient>,
         {
             let f: &F = &*(f as *const F);
-            f(&SocketClient::from_glib_borrow(this).unsafe_cast())
+            f(&SocketClient::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::protocol\0".as_ptr() as *const _,
-                Some(transmute(notify_protocol_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_protocol_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -886,15 +894,15 @@ impl<O: IsA<SocketClient>> SocketClientExt for O {
             P: IsA<SocketClient>,
         {
             let f: &F = &*(f as *const F);
-            f(&SocketClient::from_glib_borrow(this).unsafe_cast())
+            f(&SocketClient::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::proxy-resolver\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_proxy_resolver_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_proxy_resolver_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -910,14 +918,16 @@ impl<O: IsA<SocketClient>> SocketClientExt for O {
             P: IsA<SocketClient>,
         {
             let f: &F = &*(f as *const F);
-            f(&SocketClient::from_glib_borrow(this).unsafe_cast())
+            f(&SocketClient::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::timeout\0".as_ptr() as *const _,
-                Some(transmute(notify_timeout_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_timeout_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -932,14 +942,16 @@ impl<O: IsA<SocketClient>> SocketClientExt for O {
             P: IsA<SocketClient>,
         {
             let f: &F = &*(f as *const F);
-            f(&SocketClient::from_glib_borrow(this).unsafe_cast())
+            f(&SocketClient::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::tls\0".as_ptr() as *const _,
-                Some(transmute(notify_tls_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_tls_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -957,15 +969,15 @@ impl<O: IsA<SocketClient>> SocketClientExt for O {
             P: IsA<SocketClient>,
         {
             let f: &F = &*(f as *const F);
-            f(&SocketClient::from_glib_borrow(this).unsafe_cast())
+            f(&SocketClient::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::tls-validation-flags\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_tls_validation_flags_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_tls_validation_flags_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -981,14 +993,16 @@ impl<O: IsA<SocketClient>> SocketClientExt for O {
             P: IsA<SocketClient>,
         {
             let f: &F = &*(f as *const F);
-            f(&SocketClient::from_glib_borrow(this).unsafe_cast())
+            f(&SocketClient::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::type\0".as_ptr() as *const _,
-                Some(transmute(notify_type_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_type_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }

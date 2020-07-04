@@ -46,7 +46,7 @@ impl InetAddressMask {
         }
     }
 
-    pub fn new_from_string(mask_string: &str) -> Result<InetAddressMask, glib::Error> {
+    pub fn from_string(mask_string: &str) -> Result<InetAddressMask, glib::Error> {
         unsafe {
             let mut error = ptr::null_mut();
             let ret = gio_sys::g_inet_address_mask_new_from_string(
@@ -179,14 +179,16 @@ impl<O: IsA<InetAddressMask>> InetAddressMaskExt for O {
             P: IsA<InetAddressMask>,
         {
             let f: &F = &*(f as *const F);
-            f(&InetAddressMask::from_glib_borrow(this).unsafe_cast())
+            f(&InetAddressMask::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::address\0".as_ptr() as *const _,
-                Some(transmute(notify_address_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_address_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -204,14 +206,16 @@ impl<O: IsA<InetAddressMask>> InetAddressMaskExt for O {
             P: IsA<InetAddressMask>,
         {
             let f: &F = &*(f as *const F);
-            f(&InetAddressMask::from_glib_borrow(this).unsafe_cast())
+            f(&InetAddressMask::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::family\0".as_ptr() as *const _,
-                Some(transmute(notify_family_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_family_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -229,14 +233,16 @@ impl<O: IsA<InetAddressMask>> InetAddressMaskExt for O {
             P: IsA<InetAddressMask>,
         {
             let f: &F = &*(f as *const F);
-            f(&InetAddressMask::from_glib_borrow(this).unsafe_cast())
+            f(&InetAddressMask::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::length\0".as_ptr() as *const _,
-                Some(transmute(notify_length_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_length_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }

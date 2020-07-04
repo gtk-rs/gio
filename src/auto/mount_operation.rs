@@ -294,14 +294,16 @@ impl<O: IsA<MountOperation>> MountOperationExt for O {
             P: IsA<MountOperation>,
         {
             let f: &F = &*(f as *const F);
-            f(&MountOperation::from_glib_borrow(this).unsafe_cast())
+            f(&MountOperation::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"aborted\0".as_ptr() as *const _,
-                Some(transmute(aborted_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    aborted_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -326,7 +328,7 @@ impl<O: IsA<MountOperation>> MountOperationExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &MountOperation::from_glib_borrow(this).unsafe_cast(),
+                &MountOperation::from_glib_borrow(this).unsafe_cast_ref(),
                 &GString::from_glib_borrow(message),
                 &GString::from_glib_borrow(default_user),
                 &GString::from_glib_borrow(default_domain),
@@ -338,7 +340,9 @@ impl<O: IsA<MountOperation>> MountOperationExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"ask-password\0".as_ptr() as *const _,
-                Some(transmute(ask_password_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    ask_password_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -358,7 +362,7 @@ impl<O: IsA<MountOperation>> MountOperationExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &MountOperation::from_glib_borrow(this).unsafe_cast(),
+                &MountOperation::from_glib_borrow(this).unsafe_cast_ref(),
                 from_glib(result),
             )
         }
@@ -367,14 +371,16 @@ impl<O: IsA<MountOperation>> MountOperationExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"reply\0".as_ptr() as *const _,
-                Some(transmute(reply_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    reply_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
     }
 
     //fn connect_show_processes<Unsupported or ignored types>(&self, f: F) -> SignalHandlerId {
-    //    Empty ctype processes: *.Array TypeId { ns_id: 2, id: 3 }
+    //    Empty ctype processes: *.Array TypeId { ns_id: 2, id: 4 }
     //    Empty ctype choices: *.CArray TypeId { ns_id: 0, id: 28 }
     //}
 
@@ -396,7 +402,7 @@ impl<O: IsA<MountOperation>> MountOperationExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &MountOperation::from_glib_borrow(this).unsafe_cast(),
+                &MountOperation::from_glib_borrow(this).unsafe_cast_ref(),
                 &GString::from_glib_borrow(message),
                 time_left,
                 bytes_left,
@@ -407,8 +413,8 @@ impl<O: IsA<MountOperation>> MountOperationExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"show-unmount-progress\0".as_ptr() as *const _,
-                Some(transmute(
-                    show_unmount_progress_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    show_unmount_progress_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -424,14 +430,16 @@ impl<O: IsA<MountOperation>> MountOperationExt for O {
             P: IsA<MountOperation>,
         {
             let f: &F = &*(f as *const F);
-            f(&MountOperation::from_glib_borrow(this).unsafe_cast())
+            f(&MountOperation::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::anonymous\0".as_ptr() as *const _,
-                Some(transmute(notify_anonymous_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_anonymous_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -446,14 +454,16 @@ impl<O: IsA<MountOperation>> MountOperationExt for O {
             P: IsA<MountOperation>,
         {
             let f: &F = &*(f as *const F);
-            f(&MountOperation::from_glib_borrow(this).unsafe_cast())
+            f(&MountOperation::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::choice\0".as_ptr() as *const _,
-                Some(transmute(notify_choice_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_choice_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -468,14 +478,16 @@ impl<O: IsA<MountOperation>> MountOperationExt for O {
             P: IsA<MountOperation>,
         {
             let f: &F = &*(f as *const F);
-            f(&MountOperation::from_glib_borrow(this).unsafe_cast())
+            f(&MountOperation::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::domain\0".as_ptr() as *const _,
-                Some(transmute(notify_domain_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_domain_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -494,15 +506,15 @@ impl<O: IsA<MountOperation>> MountOperationExt for O {
             P: IsA<MountOperation>,
         {
             let f: &F = &*(f as *const F);
-            f(&MountOperation::from_glib_borrow(this).unsafe_cast())
+            f(&MountOperation::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::is-tcrypt-hidden-volume\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_is_tcrypt_hidden_volume_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_is_tcrypt_hidden_volume_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -522,15 +534,15 @@ impl<O: IsA<MountOperation>> MountOperationExt for O {
             P: IsA<MountOperation>,
         {
             let f: &F = &*(f as *const F);
-            f(&MountOperation::from_glib_borrow(this).unsafe_cast())
+            f(&MountOperation::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::is-tcrypt-system-volume\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_is_tcrypt_system_volume_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_is_tcrypt_system_volume_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -546,14 +558,16 @@ impl<O: IsA<MountOperation>> MountOperationExt for O {
             P: IsA<MountOperation>,
         {
             let f: &F = &*(f as *const F);
-            f(&MountOperation::from_glib_borrow(this).unsafe_cast())
+            f(&MountOperation::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::password\0".as_ptr() as *const _,
-                Some(transmute(notify_password_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_password_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -571,15 +585,15 @@ impl<O: IsA<MountOperation>> MountOperationExt for O {
             P: IsA<MountOperation>,
         {
             let f: &F = &*(f as *const F);
-            f(&MountOperation::from_glib_borrow(this).unsafe_cast())
+            f(&MountOperation::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::password-save\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_password_save_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_password_save_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -596,14 +610,16 @@ impl<O: IsA<MountOperation>> MountOperationExt for O {
             P: IsA<MountOperation>,
         {
             let f: &F = &*(f as *const F);
-            f(&MountOperation::from_glib_borrow(this).unsafe_cast())
+            f(&MountOperation::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::pim\0".as_ptr() as *const _,
-                Some(transmute(notify_pim_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_pim_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -618,14 +634,16 @@ impl<O: IsA<MountOperation>> MountOperationExt for O {
             P: IsA<MountOperation>,
         {
             let f: &F = &*(f as *const F);
-            f(&MountOperation::from_glib_borrow(this).unsafe_cast())
+            f(&MountOperation::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::username\0".as_ptr() as *const _,
-                Some(transmute(notify_username_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_username_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }

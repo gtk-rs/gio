@@ -199,7 +199,7 @@ impl<O: IsA<ActionGroup>> ActionGroupExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &ActionGroup::from_glib_borrow(this).unsafe_cast(),
+                &ActionGroup::from_glib_borrow(this).unsafe_cast_ref(),
                 &GString::from_glib_borrow(action_name),
             )
         }
@@ -208,7 +208,9 @@ impl<O: IsA<ActionGroup>> ActionGroupExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"action-added\0".as_ptr() as *const _,
-                Some(transmute(action_added_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    action_added_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -228,7 +230,7 @@ impl<O: IsA<ActionGroup>> ActionGroupExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &ActionGroup::from_glib_borrow(this).unsafe_cast(),
+                &ActionGroup::from_glib_borrow(this).unsafe_cast_ref(),
                 &GString::from_glib_borrow(action_name),
                 from_glib(enabled),
             )
@@ -238,8 +240,8 @@ impl<O: IsA<ActionGroup>> ActionGroupExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"action-enabled-changed\0".as_ptr() as *const _,
-                Some(transmute(
-                    action_enabled_changed_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    action_enabled_changed_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -256,7 +258,7 @@ impl<O: IsA<ActionGroup>> ActionGroupExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &ActionGroup::from_glib_borrow(this).unsafe_cast(),
+                &ActionGroup::from_glib_borrow(this).unsafe_cast_ref(),
                 &GString::from_glib_borrow(action_name),
             )
         }
@@ -265,7 +267,9 @@ impl<O: IsA<ActionGroup>> ActionGroupExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"action-removed\0".as_ptr() as *const _,
-                Some(transmute(action_removed_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    action_removed_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -288,7 +292,7 @@ impl<O: IsA<ActionGroup>> ActionGroupExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &ActionGroup::from_glib_borrow(this).unsafe_cast(),
+                &ActionGroup::from_glib_borrow(this).unsafe_cast_ref(),
                 &GString::from_glib_borrow(action_name),
                 &from_glib_borrow(value),
             )
@@ -298,8 +302,8 @@ impl<O: IsA<ActionGroup>> ActionGroupExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"action-state-changed\0".as_ptr() as *const _,
-                Some(transmute(
-                    action_state_changed_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    action_state_changed_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )

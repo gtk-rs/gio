@@ -16,6 +16,86 @@ use gobject_sys;
 use std::fmt;
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
+pub enum BusType {
+    Starter,
+    None,
+    System,
+    Session,
+    #[doc(hidden)]
+    __Unknown(i32),
+}
+
+impl fmt::Display for BusType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "BusType::{}",
+            match *self {
+                BusType::Starter => "Starter",
+                BusType::None => "None",
+                BusType::System => "System",
+                BusType::Session => "Session",
+                _ => "Unknown",
+            }
+        )
+    }
+}
+
+#[doc(hidden)]
+impl ToGlib for BusType {
+    type GlibType = gio_sys::GBusType;
+
+    fn to_glib(&self) -> gio_sys::GBusType {
+        match *self {
+            BusType::Starter => gio_sys::G_BUS_TYPE_STARTER,
+            BusType::None => gio_sys::G_BUS_TYPE_NONE,
+            BusType::System => gio_sys::G_BUS_TYPE_SYSTEM,
+            BusType::Session => gio_sys::G_BUS_TYPE_SESSION,
+            BusType::__Unknown(value) => value,
+        }
+    }
+}
+
+#[doc(hidden)]
+impl FromGlib<gio_sys::GBusType> for BusType {
+    fn from_glib(value: gio_sys::GBusType) -> Self {
+        match value {
+            -1 => BusType::Starter,
+            0 => BusType::None,
+            1 => BusType::System,
+            2 => BusType::Session,
+            value => BusType::__Unknown(value),
+        }
+    }
+}
+
+impl StaticType for BusType {
+    fn static_type() -> Type {
+        unsafe { from_glib(gio_sys::g_bus_type_get_type()) }
+    }
+}
+
+impl<'a> FromValueOptional<'a> for BusType {
+    unsafe fn from_value_optional(value: &Value) -> Option<Self> {
+        Some(FromValue::from_value(value))
+    }
+}
+
+impl<'a> FromValue<'a> for BusType {
+    unsafe fn from_value(value: &Value) -> Self {
+        from_glib(gobject_sys::g_value_get_enum(value.to_glib_none().0))
+    }
+}
+
+impl SetValue for BusType {
+    unsafe fn set_value(value: &mut Value, this: &Self) {
+        gobject_sys::g_value_set_enum(value.to_glib_none_mut().0, this.to_glib())
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum ConverterResult {
     Error,
     Converted,
@@ -94,6 +174,7 @@ impl SetValue for ConverterResult {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum CredentialsType {
     Invalid,
     LinuxUcred,
@@ -182,6 +263,266 @@ impl SetValue for CredentialsType {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
+pub enum DBusMessageByteOrder {
+    BigEndian,
+    LittleEndian,
+    #[doc(hidden)]
+    __Unknown(i32),
+}
+
+impl fmt::Display for DBusMessageByteOrder {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "DBusMessageByteOrder::{}",
+            match *self {
+                DBusMessageByteOrder::BigEndian => "BigEndian",
+                DBusMessageByteOrder::LittleEndian => "LittleEndian",
+                _ => "Unknown",
+            }
+        )
+    }
+}
+
+#[doc(hidden)]
+impl ToGlib for DBusMessageByteOrder {
+    type GlibType = gio_sys::GDBusMessageByteOrder;
+
+    fn to_glib(&self) -> gio_sys::GDBusMessageByteOrder {
+        match *self {
+            DBusMessageByteOrder::BigEndian => gio_sys::G_DBUS_MESSAGE_BYTE_ORDER_BIG_ENDIAN,
+            DBusMessageByteOrder::LittleEndian => gio_sys::G_DBUS_MESSAGE_BYTE_ORDER_LITTLE_ENDIAN,
+            DBusMessageByteOrder::__Unknown(value) => value,
+        }
+    }
+}
+
+#[doc(hidden)]
+impl FromGlib<gio_sys::GDBusMessageByteOrder> for DBusMessageByteOrder {
+    fn from_glib(value: gio_sys::GDBusMessageByteOrder) -> Self {
+        match value {
+            66 => DBusMessageByteOrder::BigEndian,
+            108 => DBusMessageByteOrder::LittleEndian,
+            value => DBusMessageByteOrder::__Unknown(value),
+        }
+    }
+}
+
+impl StaticType for DBusMessageByteOrder {
+    fn static_type() -> Type {
+        unsafe { from_glib(gio_sys::g_dbus_message_byte_order_get_type()) }
+    }
+}
+
+impl<'a> FromValueOptional<'a> for DBusMessageByteOrder {
+    unsafe fn from_value_optional(value: &Value) -> Option<Self> {
+        Some(FromValue::from_value(value))
+    }
+}
+
+impl<'a> FromValue<'a> for DBusMessageByteOrder {
+    unsafe fn from_value(value: &Value) -> Self {
+        from_glib(gobject_sys::g_value_get_enum(value.to_glib_none().0))
+    }
+}
+
+impl SetValue for DBusMessageByteOrder {
+    unsafe fn set_value(value: &mut Value, this: &Self) {
+        gobject_sys::g_value_set_enum(value.to_glib_none_mut().0, this.to_glib())
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
+pub enum DBusMessageHeaderField {
+    Invalid,
+    Path,
+    Interface,
+    Member,
+    ErrorName,
+    ReplySerial,
+    Destination,
+    Sender,
+    Signature,
+    NumUnixFds,
+    #[doc(hidden)]
+    __Unknown(i32),
+}
+
+impl fmt::Display for DBusMessageHeaderField {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "DBusMessageHeaderField::{}",
+            match *self {
+                DBusMessageHeaderField::Invalid => "Invalid",
+                DBusMessageHeaderField::Path => "Path",
+                DBusMessageHeaderField::Interface => "Interface",
+                DBusMessageHeaderField::Member => "Member",
+                DBusMessageHeaderField::ErrorName => "ErrorName",
+                DBusMessageHeaderField::ReplySerial => "ReplySerial",
+                DBusMessageHeaderField::Destination => "Destination",
+                DBusMessageHeaderField::Sender => "Sender",
+                DBusMessageHeaderField::Signature => "Signature",
+                DBusMessageHeaderField::NumUnixFds => "NumUnixFds",
+                _ => "Unknown",
+            }
+        )
+    }
+}
+
+#[doc(hidden)]
+impl ToGlib for DBusMessageHeaderField {
+    type GlibType = gio_sys::GDBusMessageHeaderField;
+
+    fn to_glib(&self) -> gio_sys::GDBusMessageHeaderField {
+        match *self {
+            DBusMessageHeaderField::Invalid => gio_sys::G_DBUS_MESSAGE_HEADER_FIELD_INVALID,
+            DBusMessageHeaderField::Path => gio_sys::G_DBUS_MESSAGE_HEADER_FIELD_PATH,
+            DBusMessageHeaderField::Interface => gio_sys::G_DBUS_MESSAGE_HEADER_FIELD_INTERFACE,
+            DBusMessageHeaderField::Member => gio_sys::G_DBUS_MESSAGE_HEADER_FIELD_MEMBER,
+            DBusMessageHeaderField::ErrorName => gio_sys::G_DBUS_MESSAGE_HEADER_FIELD_ERROR_NAME,
+            DBusMessageHeaderField::ReplySerial => {
+                gio_sys::G_DBUS_MESSAGE_HEADER_FIELD_REPLY_SERIAL
+            }
+            DBusMessageHeaderField::Destination => gio_sys::G_DBUS_MESSAGE_HEADER_FIELD_DESTINATION,
+            DBusMessageHeaderField::Sender => gio_sys::G_DBUS_MESSAGE_HEADER_FIELD_SENDER,
+            DBusMessageHeaderField::Signature => gio_sys::G_DBUS_MESSAGE_HEADER_FIELD_SIGNATURE,
+            DBusMessageHeaderField::NumUnixFds => gio_sys::G_DBUS_MESSAGE_HEADER_FIELD_NUM_UNIX_FDS,
+            DBusMessageHeaderField::__Unknown(value) => value,
+        }
+    }
+}
+
+#[doc(hidden)]
+impl FromGlib<gio_sys::GDBusMessageHeaderField> for DBusMessageHeaderField {
+    fn from_glib(value: gio_sys::GDBusMessageHeaderField) -> Self {
+        match value {
+            0 => DBusMessageHeaderField::Invalid,
+            1 => DBusMessageHeaderField::Path,
+            2 => DBusMessageHeaderField::Interface,
+            3 => DBusMessageHeaderField::Member,
+            4 => DBusMessageHeaderField::ErrorName,
+            5 => DBusMessageHeaderField::ReplySerial,
+            6 => DBusMessageHeaderField::Destination,
+            7 => DBusMessageHeaderField::Sender,
+            8 => DBusMessageHeaderField::Signature,
+            9 => DBusMessageHeaderField::NumUnixFds,
+            value => DBusMessageHeaderField::__Unknown(value),
+        }
+    }
+}
+
+impl StaticType for DBusMessageHeaderField {
+    fn static_type() -> Type {
+        unsafe { from_glib(gio_sys::g_dbus_message_header_field_get_type()) }
+    }
+}
+
+impl<'a> FromValueOptional<'a> for DBusMessageHeaderField {
+    unsafe fn from_value_optional(value: &Value) -> Option<Self> {
+        Some(FromValue::from_value(value))
+    }
+}
+
+impl<'a> FromValue<'a> for DBusMessageHeaderField {
+    unsafe fn from_value(value: &Value) -> Self {
+        from_glib(gobject_sys::g_value_get_enum(value.to_glib_none().0))
+    }
+}
+
+impl SetValue for DBusMessageHeaderField {
+    unsafe fn set_value(value: &mut Value, this: &Self) {
+        gobject_sys::g_value_set_enum(value.to_glib_none_mut().0, this.to_glib())
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
+pub enum DBusMessageType {
+    Invalid,
+    MethodCall,
+    MethodReturn,
+    Error,
+    Signal,
+    #[doc(hidden)]
+    __Unknown(i32),
+}
+
+impl fmt::Display for DBusMessageType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "DBusMessageType::{}",
+            match *self {
+                DBusMessageType::Invalid => "Invalid",
+                DBusMessageType::MethodCall => "MethodCall",
+                DBusMessageType::MethodReturn => "MethodReturn",
+                DBusMessageType::Error => "Error",
+                DBusMessageType::Signal => "Signal",
+                _ => "Unknown",
+            }
+        )
+    }
+}
+
+#[doc(hidden)]
+impl ToGlib for DBusMessageType {
+    type GlibType = gio_sys::GDBusMessageType;
+
+    fn to_glib(&self) -> gio_sys::GDBusMessageType {
+        match *self {
+            DBusMessageType::Invalid => gio_sys::G_DBUS_MESSAGE_TYPE_INVALID,
+            DBusMessageType::MethodCall => gio_sys::G_DBUS_MESSAGE_TYPE_METHOD_CALL,
+            DBusMessageType::MethodReturn => gio_sys::G_DBUS_MESSAGE_TYPE_METHOD_RETURN,
+            DBusMessageType::Error => gio_sys::G_DBUS_MESSAGE_TYPE_ERROR,
+            DBusMessageType::Signal => gio_sys::G_DBUS_MESSAGE_TYPE_SIGNAL,
+            DBusMessageType::__Unknown(value) => value,
+        }
+    }
+}
+
+#[doc(hidden)]
+impl FromGlib<gio_sys::GDBusMessageType> for DBusMessageType {
+    fn from_glib(value: gio_sys::GDBusMessageType) -> Self {
+        match value {
+            0 => DBusMessageType::Invalid,
+            1 => DBusMessageType::MethodCall,
+            2 => DBusMessageType::MethodReturn,
+            3 => DBusMessageType::Error,
+            4 => DBusMessageType::Signal,
+            value => DBusMessageType::__Unknown(value),
+        }
+    }
+}
+
+impl StaticType for DBusMessageType {
+    fn static_type() -> Type {
+        unsafe { from_glib(gio_sys::g_dbus_message_type_get_type()) }
+    }
+}
+
+impl<'a> FromValueOptional<'a> for DBusMessageType {
+    unsafe fn from_value_optional(value: &Value) -> Option<Self> {
+        Some(FromValue::from_value(value))
+    }
+}
+
+impl<'a> FromValue<'a> for DBusMessageType {
+    unsafe fn from_value(value: &Value) -> Self {
+        from_glib(gobject_sys::g_value_get_enum(value.to_glib_none().0))
+    }
+}
+
+impl SetValue for DBusMessageType {
+    unsafe fn set_value(value: &mut Value, this: &Self) {
+        gobject_sys::g_value_set_enum(value.to_glib_none_mut().0, this.to_glib())
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum DataStreamByteOrder {
     BigEndian,
     LittleEndian,
@@ -256,6 +597,7 @@ impl SetValue for DataStreamByteOrder {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum DataStreamNewlineType {
     Lf,
     Cr,
@@ -334,6 +676,7 @@ impl SetValue for DataStreamNewlineType {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum DriveStartStopType {
     Unknown,
     Shutdown,
@@ -416,6 +759,7 @@ impl SetValue for DriveStartStopType {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum EmblemOrigin {
     Unknown,
     Device,
@@ -494,6 +838,7 @@ impl SetValue for EmblemOrigin {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum FileAttributeStatus {
     Unset,
     Set,
@@ -568,6 +913,7 @@ impl SetValue for FileAttributeStatus {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum FileAttributeType {
     Invalid,
     String,
@@ -670,6 +1016,7 @@ impl SetValue for FileAttributeType {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum FileMonitorEvent {
     Changed,
     ChangesDoneHint,
@@ -776,6 +1123,7 @@ impl SetValue for FileMonitorEvent {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum FileType {
     Unknown,
     Regular,
@@ -866,6 +1214,7 @@ impl SetValue for FileType {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum IOErrorEnum {
     Failed,
     NotFound,
@@ -1178,7 +1527,91 @@ impl SetValue for IOErrorEnum {
     }
 }
 
+#[cfg(any(feature = "v2_64", feature = "dox"))]
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
+pub enum MemoryMonitorWarningLevel {
+    Low,
+    Medium,
+    Critical,
+    #[doc(hidden)]
+    __Unknown(i32),
+}
+
+#[cfg(any(feature = "v2_64", feature = "dox"))]
+impl fmt::Display for MemoryMonitorWarningLevel {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "MemoryMonitorWarningLevel::{}",
+            match *self {
+                MemoryMonitorWarningLevel::Low => "Low",
+                MemoryMonitorWarningLevel::Medium => "Medium",
+                MemoryMonitorWarningLevel::Critical => "Critical",
+                _ => "Unknown",
+            }
+        )
+    }
+}
+
+#[cfg(any(feature = "v2_64", feature = "dox"))]
+#[doc(hidden)]
+impl ToGlib for MemoryMonitorWarningLevel {
+    type GlibType = gio_sys::GMemoryMonitorWarningLevel;
+
+    fn to_glib(&self) -> gio_sys::GMemoryMonitorWarningLevel {
+        match *self {
+            MemoryMonitorWarningLevel::Low => gio_sys::G_MEMORY_MONITOR_WARNING_LEVEL_LOW,
+            MemoryMonitorWarningLevel::Medium => gio_sys::G_MEMORY_MONITOR_WARNING_LEVEL_MEDIUM,
+            MemoryMonitorWarningLevel::Critical => gio_sys::G_MEMORY_MONITOR_WARNING_LEVEL_CRITICAL,
+            MemoryMonitorWarningLevel::__Unknown(value) => value,
+        }
+    }
+}
+
+#[cfg(any(feature = "v2_64", feature = "dox"))]
+#[doc(hidden)]
+impl FromGlib<gio_sys::GMemoryMonitorWarningLevel> for MemoryMonitorWarningLevel {
+    fn from_glib(value: gio_sys::GMemoryMonitorWarningLevel) -> Self {
+        match value {
+            50 => MemoryMonitorWarningLevel::Low,
+            100 => MemoryMonitorWarningLevel::Medium,
+            255 => MemoryMonitorWarningLevel::Critical,
+            value => MemoryMonitorWarningLevel::__Unknown(value),
+        }
+    }
+}
+
+#[cfg(any(feature = "v2_64", feature = "dox"))]
+impl StaticType for MemoryMonitorWarningLevel {
+    fn static_type() -> Type {
+        unsafe { from_glib(gio_sys::g_memory_monitor_warning_level_get_type()) }
+    }
+}
+
+#[cfg(any(feature = "v2_64", feature = "dox"))]
+impl<'a> FromValueOptional<'a> for MemoryMonitorWarningLevel {
+    unsafe fn from_value_optional(value: &Value) -> Option<Self> {
+        Some(FromValue::from_value(value))
+    }
+}
+
+#[cfg(any(feature = "v2_64", feature = "dox"))]
+impl<'a> FromValue<'a> for MemoryMonitorWarningLevel {
+    unsafe fn from_value(value: &Value) -> Self {
+        from_glib(gobject_sys::g_value_get_enum(value.to_glib_none().0))
+    }
+}
+
+#[cfg(any(feature = "v2_64", feature = "dox"))]
+impl SetValue for MemoryMonitorWarningLevel {
+    unsafe fn set_value(value: &mut Value, this: &Self) {
+        gobject_sys::g_value_set_enum(value.to_glib_none_mut().0, this.to_glib())
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum MountOperationResult {
     Handled,
     Aborted,
@@ -1254,6 +1687,7 @@ impl SetValue for MountOperationResult {
 
 #[cfg(any(feature = "v2_44", feature = "dox"))]
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum NetworkConnectivity {
     Local,
     Limited,
@@ -1339,6 +1773,7 @@ impl SetValue for NetworkConnectivity {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum NotificationPriority {
     Normal,
     Low,
@@ -1417,6 +1852,7 @@ impl SetValue for NotificationPriority {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum PasswordSave {
     Never,
     ForSession,
@@ -1491,6 +1927,7 @@ impl SetValue for PasswordSave {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum ResolverRecordType {
     Srv,
     Mx,
@@ -1573,6 +2010,7 @@ impl SetValue for ResolverRecordType {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum ResourceError {
     NotFound,
     Internal,
@@ -1661,6 +2099,7 @@ impl SetValue for ResourceError {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum SocketClientEvent {
     Resolving,
     Resolved,
@@ -1759,6 +2198,7 @@ impl SetValue for SocketClientEvent {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum SocketFamily {
     Invalid,
     Unix,
@@ -1838,6 +2278,7 @@ impl SetValue for SocketFamily {
 
 #[cfg(any(feature = "v2_46", feature = "dox"))]
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum SocketListenerEvent {
     Binding,
     Bound,
@@ -1923,6 +2364,7 @@ impl SetValue for SocketListenerEvent {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum SocketProtocol {
     Unknown,
     Default,
@@ -2005,6 +2447,7 @@ impl SetValue for SocketProtocol {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum SocketType {
     Invalid,
     Stream,
@@ -2083,6 +2526,7 @@ impl SetValue for SocketType {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum TlsAuthenticationMode {
     None,
     Requested,
@@ -2157,6 +2601,7 @@ impl SetValue for TlsAuthenticationMode {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum TlsCertificateRequestFlags {
     None,
     #[doc(hidden)]
@@ -2223,6 +2668,7 @@ impl SetValue for TlsCertificateRequestFlags {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum TlsDatabaseLookupFlags {
     None,
     Keypair,
@@ -2293,6 +2739,7 @@ impl SetValue for TlsDatabaseLookupFlags {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum TlsInteractionResult {
     Unhandled,
     Handled,
@@ -2368,6 +2815,7 @@ impl SetValue for TlsInteractionResult {
 
 #[cfg_attr(feature = "v2_60", deprecated)]
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum TlsRehandshakeMode {
     Never,
     Safely,
@@ -2449,6 +2897,7 @@ impl SetValue for TlsRehandshakeMode {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum UnixSocketAddressType {
     Invalid,
     Anonymous,
@@ -2531,6 +2980,7 @@ impl SetValue for UnixSocketAddressType {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
+#[non_exhaustive]
 pub enum ZlibCompressorFormat {
     Zlib,
     Gzip,

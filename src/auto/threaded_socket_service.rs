@@ -28,21 +28,12 @@ glib_wrapper! {
     }
 }
 
-impl ThreadedSocketService {
-    pub fn new(max_threads: i32) -> ThreadedSocketService {
-        unsafe {
-            SocketService::from_glib_full(gio_sys::g_threaded_socket_service_new(max_threads))
-                .unsafe_cast()
-        }
-    }
-}
-
 pub const NONE_THREADED_SOCKET_SERVICE: Option<&ThreadedSocketService> = None;
 
 pub trait ThreadedSocketServiceExt: 'static {
     fn get_property_max_threads(&self) -> i32;
 
-    fn connect_run<F: Fn(&Self, &SocketConnection, &glib::Object) -> bool + 'static>(
+    fn connect_run<F: Fn(&Self, &SocketConnection, Option<&glib::Object>) -> bool + 'static>(
         &self,
         f: F,
     ) -> SignalHandlerId;
@@ -64,13 +55,13 @@ impl<O: IsA<ThreadedSocketService>> ThreadedSocketServiceExt for O {
         }
     }
 
-    fn connect_run<F: Fn(&Self, &SocketConnection, &glib::Object) -> bool + 'static>(
+    fn connect_run<F: Fn(&Self, &SocketConnection, Option<&glib::Object>) -> bool + 'static>(
         &self,
         f: F,
     ) -> SignalHandlerId {
         unsafe extern "C" fn run_trampoline<
             P,
-            F: Fn(&P, &SocketConnection, &glib::Object) -> bool + 'static,
+            F: Fn(&P, &SocketConnection, Option<&glib::Object>) -> bool + 'static,
         >(
             this: *mut gio_sys::GThreadedSocketService,
             connection: *mut gio_sys::GSocketConnection,
@@ -82,9 +73,11 @@ impl<O: IsA<ThreadedSocketService>> ThreadedSocketServiceExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &ThreadedSocketService::from_glib_borrow(this).unsafe_cast(),
+                &ThreadedSocketService::from_glib_borrow(this).unsafe_cast_ref(),
                 &from_glib_borrow(connection),
-                &from_glib_borrow(source_object),
+                Option::<glib::Object>::from_glib_borrow(source_object)
+                    .as_ref()
+                    .as_ref(),
             )
             .to_glib()
         }
@@ -93,7 +86,9 @@ impl<O: IsA<ThreadedSocketService>> ThreadedSocketServiceExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"run\0".as_ptr() as *const _,
-                Some(transmute(run_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    run_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }

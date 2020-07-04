@@ -29,7 +29,7 @@ use std::os::windows::io::{AsRawSocket, FromRawSocket, IntoRawSocket, RawSocket}
 
 impl Socket {
     #[cfg(any(unix, feature = "dox"))]
-    pub unsafe fn new_from_fd<T: IntoRawFd>(fd: T) -> Result<Socket, glib::Error> {
+    pub unsafe fn from_fd<T: IntoRawFd>(fd: T) -> Result<Socket, glib::Error> {
         let fd = fd.into_raw_fd();
         let mut error = ptr::null_mut();
         let ret = gio_sys::g_socket_new_from_fd(fd, &mut error);
@@ -40,7 +40,7 @@ impl Socket {
         }
     }
     #[cfg(any(windows, feature = "dox"))]
-    pub unsafe fn new_from_socket<T: IntoRawSocket>(socket: T) -> Result<Socket, glib::Error> {
+    pub unsafe fn from_socket<T: IntoRawSocket>(socket: T) -> Result<Socket, glib::Error> {
         let socket = socket.into_raw_socket();
         let mut error = ptr::null_mut();
         let ret = gio_sys::g_socket_new_from_fd(socket as i32, &mut error);
@@ -348,7 +348,7 @@ impl<O: IsA<Socket>> SocketExtManual for O {
             let func: &RefCell<F> = &*(func as *const RefCell<F>);
             let mut func = func.borrow_mut();
             (&mut *func)(
-                &Socket::from_glib_borrow(socket).unsafe_cast(),
+                &Socket::from_glib_borrow(socket).unsafe_cast_ref(),
                 from_glib(condition),
             )
             .to_glib()
@@ -367,7 +367,10 @@ impl<O: IsA<Socket>> SocketExtManual for O {
             let trampoline = trampoline::<O, F> as glib_sys::gpointer;
             glib_sys::g_source_set_callback(
                 source,
-                Some(transmute(trampoline)),
+                Some(transmute::<
+                    _,
+                    unsafe extern "C" fn(glib_sys::gpointer) -> glib_sys::gboolean,
+                >(trampoline)),
                 Box::into_raw(Box::new(RefCell::new(func))) as glib_sys::gpointer,
                 Some(destroy_closure::<O, F>),
             );

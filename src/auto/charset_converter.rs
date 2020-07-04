@@ -70,10 +70,11 @@ impl CharsetConverterBuilder {
         if let Some(ref use_fallback) = self.use_fallback {
             properties.push(("use-fallback", use_fallback));
         }
-        glib::Object::new(CharsetConverter::static_type(), &properties)
+        let ret = glib::Object::new(CharsetConverter::static_type(), &properties)
             .expect("object new")
-            .downcast()
-            .expect("downcast")
+            .downcast::<CharsetConverter>()
+            .expect("downcast");
+        ret
     }
 
     pub fn from_charset(mut self, from_charset: &str) -> Self {
@@ -171,15 +172,15 @@ impl<O: IsA<CharsetConverter>> CharsetConverterExt for O {
             P: IsA<CharsetConverter>,
         {
             let f: &F = &*(f as *const F);
-            f(&CharsetConverter::from_glib_borrow(this).unsafe_cast())
+            f(&CharsetConverter::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::use-fallback\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_use_fallback_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_use_fallback_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )

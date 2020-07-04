@@ -42,7 +42,7 @@ pub trait ApplicationCommandLineExt: 'static {
 
     fn get_is_remote(&self) -> bool;
 
-    //fn get_options_dict(&self) -> /*Ignored*/Option<glib::VariantDict>;
+    fn get_options_dict(&self) -> Option<glib::VariantDict>;
 
     fn get_platform_data(&self) -> Option<glib::Variant>;
 
@@ -113,9 +113,13 @@ impl<O: IsA<ApplicationCommandLine>> ApplicationCommandLineExt for O {
         }
     }
 
-    //fn get_options_dict(&self) -> /*Ignored*/Option<glib::VariantDict> {
-    //    unsafe { TODO: call gio_sys:g_application_command_line_get_options_dict() }
-    //}
+    fn get_options_dict(&self) -> Option<glib::VariantDict> {
+        unsafe {
+            from_glib_none(gio_sys::g_application_command_line_get_options_dict(
+                self.as_ref().to_glib_none().0,
+            ))
+        }
+    }
 
     fn get_platform_data(&self) -> Option<glib::Variant> {
         unsafe {
@@ -168,14 +172,16 @@ impl<O: IsA<ApplicationCommandLine>> ApplicationCommandLineExt for O {
             P: IsA<ApplicationCommandLine>,
         {
             let f: &F = &*(f as *const F);
-            f(&ApplicationCommandLine::from_glib_borrow(this).unsafe_cast())
+            f(&ApplicationCommandLine::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::is-remote\0".as_ptr() as *const _,
-                Some(transmute(notify_is_remote_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_is_remote_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }

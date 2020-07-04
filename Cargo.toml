@@ -6,7 +6,7 @@ authors = ["The Gtk-rs Project Developers"]
 keywords = ["glib", "gio", "gtk-rs", "gnome"]
 readme = "README.md"
 documentation = "http://gtk-rs.org/docs/gio/"
-version = "0.8.0"
+version = "0.8.1"
 description = "Rust bindings for the Gio library"
 repository = "https://github.com/gtk-rs/gio"
 build = "build.rs"
@@ -31,6 +31,8 @@ v2_54 = ["v2_52", "gio-sys/v2_54", "glib/v2_54"]
 v2_56 = ["v2_54", "gio-sys/v2_56", "glib/v2_56"]
 v2_58 = ["v2_56", "gio-sys/v2_58", "glib/v2_58"]
 v2_60 = ["v2_58", "gio-sys/v2_60", "glib/v2_60"]
+v2_62 = ["v2_60", "gio-sys/v2_62", "glib/v2_62"]
+v2_64 = ["v2_62", "gio-sys/v2_64", "glib/v2_64"]
 dox = ["gio-sys/dox", "glib/dox"]
 purge-lgpl-docs = ["gtk-rs-lgpl-docs"]
 embed-lgpl-docs = ["gtk-rs-lgpl-docs"]
@@ -39,7 +41,7 @@ embed-lgpl-docs = ["gtk-rs-lgpl-docs"]
 features = ["dox", "embed-lgpl-docs"]
 
 [build-dependencies.gtk-rs-lgpl-docs]
-version = "0.1.3"
+version = "0.1"
 optional = true
 
 [dependencies]
@@ -49,13 +51,30 @@ glib = "0.9.0"
 glib-sys = "0.9.1"
 libc = "0.2"
 bitflags = "1.0"
-lazy_static = "1.0"
+once_cell = "1.0"
+futures = "0.3"
 futures-core = "0.3"
 futures-channel = "0.3"
 futures-util = "0.3"
 futures-io = "0.3"
+thiserror = "1"
 
 [dev-dependencies]
 gir-format-check = "^0.1"
-serial_test = "0.1"
-serial_test_derive = "0.1"
+serial_test = "0.4"
+serial_test_derive = "0.4"
+
+[[test]]
+name = "futures"
+path = "tests/futures.rs"
+edition = "2018"
+
+# Defining one [[test]] disable test targets auto discovery
+# TODO: remove once crate has been ported to 2018 and tests/futures.rs removed
+[[test]]
+name = "std_io_copy"
+path = "tests/std_io_copy.rs"
+
+[[test]]
+name = "check_gir"
+path = "tests/check_gir.rs"

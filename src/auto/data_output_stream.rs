@@ -63,10 +63,11 @@ impl DataOutputStreamBuilder {
         if let Some(ref close_base_stream) = self.close_base_stream {
             properties.push(("close-base-stream", close_base_stream));
         }
-        glib::Object::new(DataOutputStream::static_type(), &properties)
+        let ret = glib::Object::new(DataOutputStream::static_type(), &properties)
             .expect("object new")
-            .downcast()
-            .expect("downcast")
+            .downcast::<DataOutputStream>()
+            .expect("downcast");
+        ret
     }
 
     pub fn byte_order(mut self, byte_order: DataStreamByteOrder) -> Self {
@@ -338,14 +339,16 @@ impl<O: IsA<DataOutputStream>> DataOutputStreamExt for O {
             P: IsA<DataOutputStream>,
         {
             let f: &F = &*(f as *const F);
-            f(&DataOutputStream::from_glib_borrow(this).unsafe_cast())
+            f(&DataOutputStream::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::byte-order\0".as_ptr() as *const _,
-                Some(transmute(notify_byte_order_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_byte_order_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }

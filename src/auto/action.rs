@@ -162,14 +162,16 @@ impl<O: IsA<Action>> ActionExt for O {
             P: IsA<Action>,
         {
             let f: &F = &*(f as *const F);
-            f(&Action::from_glib_borrow(this).unsafe_cast())
+            f(&Action::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::enabled\0".as_ptr() as *const _,
-                Some(transmute(notify_enabled_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_enabled_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -184,14 +186,16 @@ impl<O: IsA<Action>> ActionExt for O {
             P: IsA<Action>,
         {
             let f: &F = &*(f as *const F);
-            f(&Action::from_glib_borrow(this).unsafe_cast())
+            f(&Action::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::name\0".as_ptr() as *const _,
-                Some(transmute(notify_name_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_name_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -209,15 +213,15 @@ impl<O: IsA<Action>> ActionExt for O {
             P: IsA<Action>,
         {
             let f: &F = &*(f as *const F);
-            f(&Action::from_glib_borrow(this).unsafe_cast())
+            f(&Action::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::parameter-type\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_parameter_type_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_parameter_type_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -233,14 +237,16 @@ impl<O: IsA<Action>> ActionExt for O {
             P: IsA<Action>,
         {
             let f: &F = &*(f as *const F);
-            f(&Action::from_glib_borrow(this).unsafe_cast())
+            f(&Action::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::state\0".as_ptr() as *const _,
-                Some(transmute(notify_state_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_state_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -255,14 +261,16 @@ impl<O: IsA<Action>> ActionExt for O {
             P: IsA<Action>,
         {
             let f: &F = &*(f as *const F);
-            f(&Action::from_glib_borrow(this).unsafe_cast())
+            f(&Action::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::state-type\0".as_ptr() as *const _,
-                Some(transmute(notify_state_type_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_state_type_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }

@@ -9,16 +9,12 @@ use glib::object::IsA;
 use glib::signal::connect_raw;
 use glib::signal::SignalHandlerId;
 use glib::translate::*;
-use glib::GString;
 use glib::StaticType;
 use glib::ToValue;
 use glib_sys;
-use gobject_sys;
 use std::boxed::Box as Box_;
 use std::fmt;
-use std::mem;
 use std::mem::transmute;
-use std::pin::Pin;
 use std::ptr;
 use BufferedInputStream;
 use Cancellable;
@@ -77,10 +73,11 @@ impl DataInputStreamBuilder {
         if let Some(ref close_base_stream) = self.close_base_stream {
             properties.push(("close-base-stream", close_base_stream));
         }
-        glib::Object::new(DataInputStream::static_type(), &properties)
+        let ret = glib::Object::new(DataInputStream::static_type(), &properties)
             .expect("object new")
-            .downcast()
-            .expect("downcast")
+            .downcast::<DataInputStream>()
+            .expect("downcast");
+        ret
     }
 
     pub fn byte_order(mut self, byte_order: DataStreamByteOrder) -> Self {
@@ -126,11 +123,6 @@ pub trait DataInputStreamExt: 'static {
 
     //fn read_line_finish_utf8(&self, result: /*Ignored*/&AsyncResult) -> Result<(Option<GString>, usize), glib::Error>;
 
-    fn read_line_utf8<P: IsA<Cancellable>>(
-        &self,
-        cancellable: Option<&P>,
-    ) -> Result<(Option<GString>, usize), glib::Error>;
-
     fn read_uint16<P: IsA<Cancellable>>(&self, cancellable: Option<&P>)
         -> Result<u16, glib::Error>;
 
@@ -139,56 +131,6 @@ pub trait DataInputStreamExt: 'static {
 
     fn read_uint64<P: IsA<Cancellable>>(&self, cancellable: Option<&P>)
         -> Result<u64, glib::Error>;
-
-    #[cfg_attr(feature = "v2_56", deprecated)]
-    fn read_until<P: IsA<Cancellable>>(
-        &self,
-        stop_chars: &str,
-        cancellable: Option<&P>,
-    ) -> Result<(GString, usize), glib::Error>;
-
-    #[cfg_attr(feature = "v2_56", deprecated)]
-    fn read_until_async<
-        P: IsA<Cancellable>,
-        Q: FnOnce(Result<(GString, usize), glib::Error>) + Send + 'static,
-    >(
-        &self,
-        stop_chars: &str,
-        io_priority: glib::Priority,
-        cancellable: Option<&P>,
-        callback: Q,
-    );
-
-    #[cfg_attr(feature = "v2_56", deprecated)]
-
-    fn read_until_async_future(
-        &self,
-        stop_chars: &str,
-        io_priority: glib::Priority,
-    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(GString, usize), glib::Error>> + 'static>>;
-
-    fn read_upto<P: IsA<Cancellable>>(
-        &self,
-        stop_chars: &str,
-        cancellable: Option<&P>,
-    ) -> Result<(GString, usize), glib::Error>;
-
-    fn read_upto_async<
-        P: IsA<Cancellable>,
-        Q: FnOnce(Result<(GString, usize), glib::Error>) + Send + 'static,
-    >(
-        &self,
-        stop_chars: &str,
-        io_priority: glib::Priority,
-        cancellable: Option<&P>,
-        callback: Q,
-    );
-
-    fn read_upto_async_future(
-        &self,
-        stop_chars: &str,
-        io_priority: glib::Priority,
-    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(GString, usize), glib::Error>> + 'static>>;
 
     fn set_byte_order(&self, order: DataStreamByteOrder);
 
@@ -285,28 +227,6 @@ impl<O: IsA<DataInputStream>> DataInputStreamExt for O {
     //    unsafe { TODO: call gio_sys:g_data_input_stream_read_line_finish_utf8() }
     //}
 
-    fn read_line_utf8<P: IsA<Cancellable>>(
-        &self,
-        cancellable: Option<&P>,
-    ) -> Result<(Option<GString>, usize), glib::Error> {
-        unsafe {
-            let mut length = mem::MaybeUninit::uninit();
-            let mut error = ptr::null_mut();
-            let ret = gio_sys::g_data_input_stream_read_line_utf8(
-                self.as_ref().to_glib_none().0,
-                length.as_mut_ptr(),
-                cancellable.map(|p| p.as_ref()).to_glib_none().0,
-                &mut error,
-            );
-            let length = length.assume_init();
-            if error.is_null() {
-                Ok((from_glib_full(ret), length))
-            } else {
-                Err(from_glib_full(error))
-            }
-        }
-    }
-
     fn read_uint16<P: IsA<Cancellable>>(
         &self,
         cancellable: Option<&P>,
@@ -364,188 +284,6 @@ impl<O: IsA<DataInputStream>> DataInputStreamExt for O {
         }
     }
 
-    fn read_until<P: IsA<Cancellable>>(
-        &self,
-        stop_chars: &str,
-        cancellable: Option<&P>,
-    ) -> Result<(GString, usize), glib::Error> {
-        unsafe {
-            let mut length = mem::MaybeUninit::uninit();
-            let mut error = ptr::null_mut();
-            let ret = gio_sys::g_data_input_stream_read_until(
-                self.as_ref().to_glib_none().0,
-                stop_chars.to_glib_none().0,
-                length.as_mut_ptr(),
-                cancellable.map(|p| p.as_ref()).to_glib_none().0,
-                &mut error,
-            );
-            let length = length.assume_init();
-            if error.is_null() {
-                Ok((from_glib_full(ret), length))
-            } else {
-                Err(from_glib_full(error))
-            }
-        }
-    }
-
-    fn read_until_async<
-        P: IsA<Cancellable>,
-        Q: FnOnce(Result<(GString, usize), glib::Error>) + Send + 'static,
-    >(
-        &self,
-        stop_chars: &str,
-        io_priority: glib::Priority,
-        cancellable: Option<&P>,
-        callback: Q,
-    ) {
-        let user_data: Box_<Q> = Box_::new(callback);
-        unsafe extern "C" fn read_until_async_trampoline<
-            Q: FnOnce(Result<(GString, usize), glib::Error>) + Send + 'static,
-        >(
-            _source_object: *mut gobject_sys::GObject,
-            res: *mut gio_sys::GAsyncResult,
-            user_data: glib_sys::gpointer,
-        ) {
-            let mut error = ptr::null_mut();
-            let mut length = mem::MaybeUninit::uninit();
-            let ret = gio_sys::g_data_input_stream_read_until_finish(
-                _source_object as *mut _,
-                res,
-                length.as_mut_ptr(),
-                &mut error,
-            );
-            let length = length.assume_init();
-            let result = if error.is_null() {
-                Ok((from_glib_full(ret), length))
-            } else {
-                Err(from_glib_full(error))
-            };
-            let callback: Box_<Q> = Box_::from_raw(user_data as *mut _);
-            callback(result);
-        }
-        let callback = read_until_async_trampoline::<Q>;
-        unsafe {
-            gio_sys::g_data_input_stream_read_until_async(
-                self.as_ref().to_glib_none().0,
-                stop_chars.to_glib_none().0,
-                io_priority.to_glib(),
-                cancellable.map(|p| p.as_ref()).to_glib_none().0,
-                Some(callback),
-                Box_::into_raw(user_data) as *mut _,
-            );
-        }
-    }
-
-    fn read_until_async_future(
-        &self,
-        stop_chars: &str,
-        io_priority: glib::Priority,
-    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(GString, usize), glib::Error>> + 'static>>
-    {
-        let stop_chars = String::from(stop_chars);
-        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
-            let cancellable = Cancellable::new();
-            obj.read_until_async(&stop_chars, io_priority, Some(&cancellable), move |res| {
-                send.resolve(res);
-            });
-
-            cancellable
-        }))
-    }
-
-    fn read_upto<P: IsA<Cancellable>>(
-        &self,
-        stop_chars: &str,
-        cancellable: Option<&P>,
-    ) -> Result<(GString, usize), glib::Error> {
-        let stop_chars_len = stop_chars.len() as isize;
-        unsafe {
-            let mut length = mem::MaybeUninit::uninit();
-            let mut error = ptr::null_mut();
-            let ret = gio_sys::g_data_input_stream_read_upto(
-                self.as_ref().to_glib_none().0,
-                stop_chars.to_glib_none().0,
-                stop_chars_len,
-                length.as_mut_ptr(),
-                cancellable.map(|p| p.as_ref()).to_glib_none().0,
-                &mut error,
-            );
-            let length = length.assume_init();
-            if error.is_null() {
-                Ok((from_glib_full(ret), length))
-            } else {
-                Err(from_glib_full(error))
-            }
-        }
-    }
-
-    fn read_upto_async<
-        P: IsA<Cancellable>,
-        Q: FnOnce(Result<(GString, usize), glib::Error>) + Send + 'static,
-    >(
-        &self,
-        stop_chars: &str,
-        io_priority: glib::Priority,
-        cancellable: Option<&P>,
-        callback: Q,
-    ) {
-        let stop_chars_len = stop_chars.len() as isize;
-        let user_data: Box_<Q> = Box_::new(callback);
-        unsafe extern "C" fn read_upto_async_trampoline<
-            Q: FnOnce(Result<(GString, usize), glib::Error>) + Send + 'static,
-        >(
-            _source_object: *mut gobject_sys::GObject,
-            res: *mut gio_sys::GAsyncResult,
-            user_data: glib_sys::gpointer,
-        ) {
-            let mut error = ptr::null_mut();
-            let mut length = mem::MaybeUninit::uninit();
-            let ret = gio_sys::g_data_input_stream_read_upto_finish(
-                _source_object as *mut _,
-                res,
-                length.as_mut_ptr(),
-                &mut error,
-            );
-            let length = length.assume_init();
-            let result = if error.is_null() {
-                Ok((from_glib_full(ret), length))
-            } else {
-                Err(from_glib_full(error))
-            };
-            let callback: Box_<Q> = Box_::from_raw(user_data as *mut _);
-            callback(result);
-        }
-        let callback = read_upto_async_trampoline::<Q>;
-        unsafe {
-            gio_sys::g_data_input_stream_read_upto_async(
-                self.as_ref().to_glib_none().0,
-                stop_chars.to_glib_none().0,
-                stop_chars_len,
-                io_priority.to_glib(),
-                cancellable.map(|p| p.as_ref()).to_glib_none().0,
-                Some(callback),
-                Box_::into_raw(user_data) as *mut _,
-            );
-        }
-    }
-
-    fn read_upto_async_future(
-        &self,
-        stop_chars: &str,
-        io_priority: glib::Priority,
-    ) -> Pin<Box_<dyn std::future::Future<Output = Result<(GString, usize), glib::Error>> + 'static>>
-    {
-        let stop_chars = String::from(stop_chars);
-        Box_::pin(crate::GioFuture::new(self, move |obj, send| {
-            let cancellable = Cancellable::new();
-            obj.read_upto_async(&stop_chars, io_priority, Some(&cancellable), move |res| {
-                send.resolve(res);
-            });
-
-            cancellable
-        }))
-    }
-
     fn set_byte_order(&self, order: DataStreamByteOrder) {
         unsafe {
             gio_sys::g_data_input_stream_set_byte_order(
@@ -573,14 +311,16 @@ impl<O: IsA<DataInputStream>> DataInputStreamExt for O {
             P: IsA<DataInputStream>,
         {
             let f: &F = &*(f as *const F);
-            f(&DataInputStream::from_glib_borrow(this).unsafe_cast())
+            f(&DataInputStream::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::byte-order\0".as_ptr() as *const _,
-                Some(transmute(notify_byte_order_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_byte_order_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -598,15 +338,15 @@ impl<O: IsA<DataInputStream>> DataInputStreamExt for O {
             P: IsA<DataInputStream>,
         {
             let f: &F = &*(f as *const F);
-            f(&DataInputStream::from_glib_borrow(this).unsafe_cast())
+            f(&DataInputStream::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::newline-type\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_newline_type_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_newline_type_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )

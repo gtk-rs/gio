@@ -143,9 +143,11 @@ impl<O: IsA<FileMonitor>> FileMonitorExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &FileMonitor::from_glib_borrow(this).unsafe_cast(),
+                &FileMonitor::from_glib_borrow(this).unsafe_cast_ref(),
                 &from_glib_borrow(file),
-                Option::<File>::from_glib_borrow(other_file).as_ref(),
+                Option::<File>::from_glib_borrow(other_file)
+                    .as_ref()
+                    .as_ref(),
                 from_glib(event_type),
             )
         }
@@ -154,7 +156,9 @@ impl<O: IsA<FileMonitor>> FileMonitorExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"changed\0".as_ptr() as *const _,
-                Some(transmute(changed_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    changed_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -169,14 +173,16 @@ impl<O: IsA<FileMonitor>> FileMonitorExt for O {
             P: IsA<FileMonitor>,
         {
             let f: &F = &*(f as *const F);
-            f(&FileMonitor::from_glib_borrow(this).unsafe_cast())
+            f(&FileMonitor::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::cancelled\0".as_ptr() as *const _,
-                Some(transmute(notify_cancelled_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_cancelled_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -191,14 +197,16 @@ impl<O: IsA<FileMonitor>> FileMonitorExt for O {
             P: IsA<FileMonitor>,
         {
             let f: &F = &*(f as *const F);
-            f(&FileMonitor::from_glib_borrow(this).unsafe_cast())
+            f(&FileMonitor::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::rate-limit\0".as_ptr() as *const _,
-                Some(transmute(notify_rate_limit_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_rate_limit_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }

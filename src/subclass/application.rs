@@ -9,10 +9,12 @@ use glib::translate::*;
 
 use glib::subclass::prelude::*;
 
+use glib::VariantDict;
+
 use Application;
 use ApplicationClass;
 
-use libc::{c_char, c_void};
+use libc::{c_char, c_int, c_void};
 use std::convert;
 use std::ffi::OsString;
 use std::fmt;
@@ -123,6 +125,10 @@ pub trait ApplicationImpl: ApplicationImplExt + 'static {
     fn startup(&self, application: &Application) {
         self.parent_startup(application)
     }
+
+    fn handle_local_options(&self, application: &Application, options: &VariantDict) -> i32 {
+        self.parent_handle_local_options(application, options)
+    }
 }
 
 pub trait ApplicationImplExt {
@@ -144,6 +150,7 @@ pub trait ApplicationImplExt {
     fn parent_run_mainloop(&self, application: &Application);
     fn parent_shutdown(&self, application: &Application);
     fn parent_startup(&self, application: &Application);
+    fn parent_handle_local_options(&self, application: &Application, options: &VariantDict) -> i32;
 }
 
 impl<T: ApplicationImpl + ObjectImpl> ApplicationImplExt for T {
@@ -281,6 +288,19 @@ impl<T: ApplicationImpl + ObjectImpl> ApplicationImplExt for T {
             f(application.to_glib_none().0)
         }
     }
+
+    fn parent_handle_local_options(&self, application: &Application, options: &VariantDict) -> i32 {
+        unsafe {
+            let data = self.get_type_data();
+            let parent_class = data.as_ref().get_parent_class() as *mut gio_sys::GApplicationClass;
+            if let Some(f) = (*parent_class).handle_local_options {
+                f(application.to_glib_none().0, options.to_glib_none().0)
+            } else {
+                // Continue default handling
+                -1
+            }
+        }
+    }
 }
 
 unsafe impl<T: ObjectSubclass + ApplicationImpl> IsSubclassable<T> for ApplicationClass {
@@ -298,6 +318,7 @@ unsafe impl<T: ObjectSubclass + ApplicationImpl> IsSubclassable<T> for Applicati
             klass.run_mainloop = Some(application_run_mainloop::<T>);
             klass.shutdown = Some(application_shutdown::<T>);
             klass.startup = Some(application_startup::<T>);
+            klass.handle_local_options = Some(application_handle_local_options::<T>);
         }
     }
 }
@@ -308,7 +329,7 @@ where
 {
     let instance = &*(ptr as *mut T::Instance);
     let imp = instance.get_impl();
-    let wrap: Application = from_glib_borrow(ptr);
+    let wrap: Borrowed<Application> = from_glib_borrow(ptr);
 
     imp.activate(&wrap)
 }
@@ -321,7 +342,7 @@ unsafe extern "C" fn application_after_emit<T: ObjectSubclass>(
 {
     let instance = &*(ptr as *mut T::Instance);
     let imp = instance.get_impl();
-    let wrap: Application = from_glib_borrow(ptr);
+    let wrap: Borrowed<Application> = from_glib_borrow(ptr);
 
     imp.after_emit(&wrap, &from_glib_borrow(platform_data))
 }
@@ -333,7 +354,7 @@ unsafe extern "C" fn application_before_emit<T: ObjectSubclass>(
 {
     let instance = &*(ptr as *mut T::Instance);
     let imp = instance.get_impl();
-    let wrap: Application = from_glib_borrow(ptr);
+    let wrap: Borrowed<Application> = from_glib_borrow(ptr);
 
     imp.before_emit(&wrap, &from_glib_borrow(platform_data))
 }
@@ -346,7 +367,7 @@ where
 {
     let instance = &*(ptr as *mut T::Instance);
     let imp = instance.get_impl();
-    let wrap: Application = from_glib_borrow(ptr);
+    let wrap: Borrowed<Application> = from_glib_borrow(ptr);
 
     imp.command_line(&wrap, &from_glib_borrow(command_line))
 }
@@ -360,7 +381,7 @@ where
 {
     let instance = &*(ptr as *mut T::Instance);
     let imp = instance.get_impl();
-    let wrap: Application = from_glib_borrow(ptr);
+    let wrap: Borrowed<Application> = from_glib_borrow(ptr);
 
     let mut args = ArgumentList::new(arguments);
     let res = imp.local_command_line(&wrap, &mut args);
@@ -384,7 +405,7 @@ unsafe extern "C" fn application_open<T: ObjectSubclass>(
 {
     let instance = &*(ptr as *mut T::Instance);
     let imp = instance.get_impl();
-    let wrap: Application = from_glib_borrow(ptr);
+    let wrap: Borrowed<Application> = from_glib_borrow(ptr);
 
     let files: Vec<::File> = FromGlibContainer::from_glib_none_num(files, num_files as usize);
     imp.open(
@@ -399,7 +420,7 @@ where
 {
     let instance = &*(ptr as *mut T::Instance);
     let imp = instance.get_impl();
-    let wrap: Application = from_glib_borrow(ptr);
+    let wrap: Borrowed<Application> = from_glib_borrow(ptr);
 
     imp.quit_mainloop(&wrap)
 }
@@ -409,7 +430,7 @@ where
 {
     let instance = &*(ptr as *mut T::Instance);
     let imp = instance.get_impl();
-    let wrap: Application = from_glib_borrow(ptr);
+    let wrap: Borrowed<Application> = from_glib_borrow(ptr);
 
     imp.run_mainloop(&wrap)
 }
@@ -419,7 +440,7 @@ where
 {
     let instance = &*(ptr as *mut T::Instance);
     let imp = instance.get_impl();
-    let wrap: Application = from_glib_borrow(ptr);
+    let wrap: Borrowed<Application> = from_glib_borrow(ptr);
 
     imp.shutdown(&wrap)
 }
@@ -429,9 +450,23 @@ where
 {
     let instance = &*(ptr as *mut T::Instance);
     let imp = instance.get_impl();
-    let wrap: Application = from_glib_borrow(ptr);
+    let wrap: Borrowed<Application> = from_glib_borrow(ptr);
 
     imp.startup(&wrap)
+}
+
+unsafe extern "C" fn application_handle_local_options<T: ObjectSubclass>(
+    ptr: *mut gio_sys::GApplication,
+    options: *mut glib_sys::GVariantDict,
+) -> c_int
+where
+    T: ApplicationImpl,
+{
+    let instance = &*(ptr as *mut T::Instance);
+    let imp = instance.get_impl();
+    let wrap: Borrowed<Application> = from_glib_borrow(ptr);
+
+    imp.handle_local_options(&wrap, &from_glib_borrow(options))
 }
 
 #[cfg(test)]
@@ -500,7 +535,7 @@ mod tests {
                 assert!(!a.starts_with("--local-"))
             }
 
-            return EXIT_STATUS;
+            EXIT_STATUS
         }
     }
 

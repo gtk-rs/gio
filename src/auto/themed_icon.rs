@@ -30,7 +30,7 @@ impl ThemedIcon {
         unsafe { from_glib_full(gio_sys::g_themed_icon_new(iconname.to_glib_none().0)) }
     }
 
-    pub fn new_from_names(iconnames: &[&str]) -> ThemedIcon {
+    pub fn from_names(iconnames: &[&str]) -> ThemedIcon {
         let len = iconnames.len() as i32;
         unsafe {
             from_glib_full(gio_sys::g_themed_icon_new_from_names(
@@ -40,7 +40,7 @@ impl ThemedIcon {
         }
     }
 
-    pub fn new_with_default_fallbacks(iconname: &str) -> ThemedIcon {
+    pub fn with_default_fallbacks(iconname: &str) -> ThemedIcon {
         unsafe {
             from_glib_full(gio_sys::g_themed_icon_new_with_default_fallbacks(
                 iconname.to_glib_none().0,
@@ -100,7 +100,9 @@ impl ThemedIcon {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::names\0".as_ptr() as *const _,
-                Some(transmute(notify_names_trampoline::<F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_names_trampoline::<F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }

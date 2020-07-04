@@ -757,14 +757,16 @@ impl<O: IsA<Socket>> SocketExt for O {
             P: IsA<Socket>,
         {
             let f: &F = &*(f as *const F);
-            f(&Socket::from_glib_borrow(this).unsafe_cast())
+            f(&Socket::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::blocking\0".as_ptr() as *const _,
-                Some(transmute(notify_blocking_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_blocking_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -782,14 +784,16 @@ impl<O: IsA<Socket>> SocketExt for O {
             P: IsA<Socket>,
         {
             let f: &F = &*(f as *const F);
-            f(&Socket::from_glib_borrow(this).unsafe_cast())
+            f(&Socket::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::broadcast\0".as_ptr() as *const _,
-                Some(transmute(notify_broadcast_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_broadcast_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -807,14 +811,16 @@ impl<O: IsA<Socket>> SocketExt for O {
             P: IsA<Socket>,
         {
             let f: &F = &*(f as *const F);
-            f(&Socket::from_glib_borrow(this).unsafe_cast())
+            f(&Socket::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::keepalive\0".as_ptr() as *const _,
-                Some(transmute(notify_keepalive_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_keepalive_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -832,15 +838,15 @@ impl<O: IsA<Socket>> SocketExt for O {
             P: IsA<Socket>,
         {
             let f: &F = &*(f as *const F);
-            f(&Socket::from_glib_borrow(this).unsafe_cast())
+            f(&Socket::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::listen-backlog\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_listen_backlog_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_listen_backlog_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -859,15 +865,15 @@ impl<O: IsA<Socket>> SocketExt for O {
             P: IsA<Socket>,
         {
             let f: &F = &*(f as *const F);
-            f(&Socket::from_glib_borrow(this).unsafe_cast())
+            f(&Socket::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::local-address\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_local_address_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_local_address_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -886,15 +892,15 @@ impl<O: IsA<Socket>> SocketExt for O {
             P: IsA<Socket>,
         {
             let f: &F = &*(f as *const F);
-            f(&Socket::from_glib_borrow(this).unsafe_cast())
+            f(&Socket::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::multicast-loopback\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_multicast_loopback_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_multicast_loopback_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -913,15 +919,15 @@ impl<O: IsA<Socket>> SocketExt for O {
             P: IsA<Socket>,
         {
             let f: &F = &*(f as *const F);
-            f(&Socket::from_glib_borrow(this).unsafe_cast())
+            f(&Socket::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::multicast-ttl\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_multicast_ttl_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_multicast_ttl_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -940,15 +946,15 @@ impl<O: IsA<Socket>> SocketExt for O {
             P: IsA<Socket>,
         {
             let f: &F = &*(f as *const F);
-            f(&Socket::from_glib_borrow(this).unsafe_cast())
+            f(&Socket::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::remote-address\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_remote_address_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_remote_address_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )
@@ -967,14 +973,16 @@ impl<O: IsA<Socket>> SocketExt for O {
             P: IsA<Socket>,
         {
             let f: &F = &*(f as *const F);
-            f(&Socket::from_glib_borrow(this).unsafe_cast())
+            f(&Socket::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::timeout\0".as_ptr() as *const _,
-                Some(transmute(notify_timeout_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_timeout_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -989,14 +997,16 @@ impl<O: IsA<Socket>> SocketExt for O {
             P: IsA<Socket>,
         {
             let f: &F = &*(f as *const F);
-            f(&Socket::from_glib_borrow(this).unsafe_cast())
+            f(&Socket::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::ttl\0".as_ptr() as *const _,
-                Some(transmute(notify_ttl_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_ttl_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }

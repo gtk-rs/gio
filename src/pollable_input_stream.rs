@@ -83,7 +83,7 @@ impl<O: IsA<PollableInputStream>> PollableInputStreamExtManual for O {
         ) -> glib_sys::gboolean {
             let func: &RefCell<F> = &*(func as *const RefCell<F>);
             let mut func = func.borrow_mut();
-            (&mut *func)(&PollableInputStream::from_glib_borrow(stream).unsafe_cast()).to_glib()
+            (&mut *func)(&PollableInputStream::from_glib_borrow(stream).unsafe_cast_ref()).to_glib()
         }
         unsafe extern "C" fn destroy_closure<O, F>(ptr: glib_sys::gpointer) {
             Box::<RefCell<F>>::from_raw(ptr as *mut _);
@@ -99,7 +99,10 @@ impl<O: IsA<PollableInputStream>> PollableInputStreamExtManual for O {
             let trampoline = trampoline::<Self, F> as glib_sys::gpointer;
             glib_sys::g_source_set_callback(
                 source,
-                Some(transmute(trampoline)),
+                Some(transmute::<
+                    _,
+                    unsafe extern "C" fn(glib_sys::gpointer) -> glib_sys::gboolean,
+                >(trampoline)),
                 Box::into_raw(Box::new(RefCell::new(func))) as glib_sys::gpointer,
                 Some(destroy_closure::<Self, F>),
             );

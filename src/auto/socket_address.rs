@@ -24,7 +24,7 @@ glib_wrapper! {
 }
 
 impl SocketAddress {
-    //pub fn new_from_native(native: /*Unimplemented*/Fundamental: Pointer, len: usize) -> SocketAddress {
+    //pub fn from_native(native: /*Unimplemented*/Fundamental: Pointer, len: usize) -> SocketAddress {
     //    unsafe { TODO: call gio_sys:g_socket_address_new_from_native() }
     //}
 }
@@ -76,14 +76,16 @@ impl<O: IsA<SocketAddress>> SocketAddressExt for O {
             P: IsA<SocketAddress>,
         {
             let f: &F = &*(f as *const F);
-            f(&SocketAddress::from_glib_borrow(this).unsafe_cast())
+            f(&SocketAddress::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::family\0".as_ptr() as *const _,
-                Some(transmute(notify_family_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_family_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }

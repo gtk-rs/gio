@@ -290,7 +290,7 @@ impl<O: IsA<SocketListener>> SocketListenerExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &SocketListener::from_glib_borrow(this).unsafe_cast(),
+                &SocketListener::from_glib_borrow(this).unsafe_cast_ref(),
                 from_glib(event),
                 &from_glib_borrow(socket),
             )
@@ -300,7 +300,9 @@ impl<O: IsA<SocketListener>> SocketListenerExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"event\0".as_ptr() as *const _,
-                Some(transmute(event_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    event_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -318,15 +320,15 @@ impl<O: IsA<SocketListener>> SocketListenerExt for O {
             P: IsA<SocketListener>,
         {
             let f: &F = &*(f as *const F);
-            f(&SocketListener::from_glib_borrow(this).unsafe_cast())
+            f(&SocketListener::from_glib_borrow(this).unsafe_cast_ref())
         }
         unsafe {
             let f: Box_<F> = Box_::new(f);
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"notify::listen-backlog\0".as_ptr() as *const _,
-                Some(transmute(
-                    notify_listen_backlog_trampoline::<Self, F> as usize,
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    notify_listen_backlog_trampoline::<Self, F> as *const (),
                 )),
                 Box_::into_raw(f),
             )

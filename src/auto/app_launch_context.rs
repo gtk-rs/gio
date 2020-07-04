@@ -129,7 +129,7 @@ impl<O: IsA<AppLaunchContext>> AppLaunchContextExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &AppLaunchContext::from_glib_borrow(this).unsafe_cast(),
+                &AppLaunchContext::from_glib_borrow(this).unsafe_cast_ref(),
                 &GString::from_glib_borrow(startup_notify_id),
             )
         }
@@ -138,7 +138,9 @@ impl<O: IsA<AppLaunchContext>> AppLaunchContextExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"launch-failed\0".as_ptr() as *const _,
-                Some(transmute(launch_failed_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    launch_failed_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
@@ -158,7 +160,7 @@ impl<O: IsA<AppLaunchContext>> AppLaunchContextExt for O {
         {
             let f: &F = &*(f as *const F);
             f(
-                &AppLaunchContext::from_glib_borrow(this).unsafe_cast(),
+                &AppLaunchContext::from_glib_borrow(this).unsafe_cast_ref(),
                 &from_glib_borrow(info),
                 &from_glib_borrow(platform_data),
             )
@@ -168,7 +170,9 @@ impl<O: IsA<AppLaunchContext>> AppLaunchContextExt for O {
             connect_raw(
                 self.as_ptr() as *mut _,
                 b"launched\0".as_ptr() as *const _,
-                Some(transmute(launched_trampoline::<Self, F> as usize)),
+                Some(transmute::<_, unsafe extern "C" fn()>(
+                    launched_trampoline::<Self, F> as *const (),
+                )),
                 Box_::into_raw(f),
             )
         }
