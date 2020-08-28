@@ -46,6 +46,7 @@ pub trait InetAddressExtManual {
 }
 
 impl<O: IsA<InetAddress>> InetAddressExtManual for O {
+    // rustdoc-stripper-ignore-next
     /// Returns `None` in case the address has a native size different than 4 and 16.
     fn to_bytes<'a>(&'a self) -> Option<InetAddressBytes<'a>> {
         let size = self.get_native_size();
